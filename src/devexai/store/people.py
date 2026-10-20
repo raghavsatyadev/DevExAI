@@ -125,9 +125,15 @@ class PeopleRepo:
         role = role or person.role
         active = person.active if active is None else active
         self._check(email, role, exclude=name)
-        if person.is_admin and person.active and (role != ADMIN or not active) and self._admins(exclude=name) == 0:
-            raise PeopleError("There must always be at least one active admin.")
         with self.db.connect() as c:
+            # The last-admin check and the update share one write transaction, so two admins
+            # demoting or deactivating each other at the same time cannot both succeed.
+            c.execute("BEGIN IMMEDIATE")
+            row = c.execute("SELECT role, active FROM people WHERE name = ?", (name,)).fetchone()
+            others = c.execute("SELECT COUNT(*) FROM people WHERE role = 'admin' AND active = 1 AND name != ?",
+                               (name,)).fetchone()[0]
+            if row["role"] == ADMIN and row["active"] and (role != ADMIN or not active) and others == 0:
+                raise PeopleError("There must always be at least one active admin.")
             c.execute("UPDATE people SET email = ?, role = ?, topics = ?, active = ? WHERE name = ?",
                       (email or None, role, json.dumps(list(person.topics if topics is None else topics)),
                        int(active), name))
@@ -154,11 +160,6 @@ class PeopleRepo:
         with self.db.connect() as c:
             return bool(c.execute("SELECT 1 FROM people WHERE role = 'admin' AND active = 1 "
                                   "AND pw_hash IS NOT NULL").fetchone())
-
-    def _admins(self, exclude: str = "") -> int:
-        with self.db.connect() as c:
-            return c.execute("SELECT COUNT(*) FROM people WHERE role = 'admin' AND active = 1 AND name != ?",
-                             (exclude,)).fetchone()[0]
 
     def _check(self, email: str, role: str, exclude: str = "") -> None:
         if role not in ROLES:

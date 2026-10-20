@@ -235,15 +235,23 @@ def _cmd_publish(bot: Bot, event: Event, rest: str) -> None:
     if idea.stage is not Stage.UNDER_REVIEW:
         raise Refusal(f"{idea.label} is {LABELS[idea.stage]}; only a reviewed tool can be published.")
     blog = bot.settings.blog
+    name = post.filename(idea)
+    if (blog.dir / name).exists():
+        raise Refusal(f"A blog post file {name} is already there; move it away and publish again.")
+    # Claim the release first: once it is Published nobody can send it back, so the post never
+    # goes out for an idea that is still being changed. A concurrent deny makes this raise instead.
+    idea = bot.store.ideas.move(idea.id, Stage.PUBLISHED, expect=Stage.UNDER_REVIEW)
     try:
         path = post.write(idea, blog.dir, maintainer=event.user, note=note)
-    except post.PostExists as e:
-        raise Refusal(f"A blog post file {e} is already there; move it away and publish again.") from None
+    except (post.PostExists, OSError) as e:
+        bot.store.audit.add(idea.id, event.user, "post-failed", str(e)[:500])
+        raise Refusal(f"{idea.label} is published, but its blog post could not be written ({e}). "
+                      f"Put the post in {blog.dir} by hand.") from None
     url = blog.link(path.name)
     idea = bot.store.ideas.update(idea.id, blog_url=url)
     poster = bot.chat.mention(idea.poster)
-    bot.move(idea, Stage.PUBLISHED, f"Released by {bot.chat.mention(event.user)}. Blog post: {url}\n"
-             f"Thank you {poster} for the idea!", actor=event.user)
+    bot.announce(idea, f"Released by {bot.chat.mention(event.user)}. Blog post: {url}\n"
+                 f"Thank you {poster} for the idea!", actor=event.user)
     bot.chat.post(bot.settings.public_channel,
                   f"New tool: *{idea.title or idea.label}*. Idea by {poster}. Read and install: {url}")
 

@@ -67,11 +67,16 @@ class Bot:
              buttons: tuple[Button, ...] = ()) -> Idea:
         """Change stage (only if nobody else moved it first) and tell poster and maintainer."""
         idea = self.store.ideas.move(idea.id, dst, expect=idea.stage)
+        self.announce(idea, text, actor=actor, buttons=buttons)
+        return idea
+
+    def announce(self, idea: Idea, text: str = "", *, actor: str = "bot", buttons: tuple[Button, ...] = ()) -> None:
+        """Record the stage the idea has just moved to and tell poster and maintainer."""
+        dst = idea.stage
         self.store.audit.add(idea.id, actor, f"stage:{dst.value}", text[:500])
         people = " ".join(self.chat.mention(u) for u in dict.fromkeys(filter(None, (idea.poster, idea.maintainer))))
         head = f"*{idea.label}* is now: *{LABELS[dst]}*  {people}".rstrip()
         self.say(idea, f"{head}\n{text}".rstrip(), buttons)
-        return idea
 
     def assign(self, idea: Idea, topic: str | None) -> Idea:
         if idea.maintainer:

@@ -5,6 +5,7 @@ import pytest
 from devexai.chat import Event
 from devexai.chat.fake import FakeChat
 from devexai.config import BlogSettings, Maintainer, Settings
+from devexai.flow import post
 from devexai.flow.bot import Bot
 from devexai.llm import LLMError
 from devexai.llm.stub import StubLLM
@@ -324,3 +325,22 @@ def test_hand_over_restarts_the_wait(make_bot):
     assert bot.hand_over("alice", "admin") == 1
     idea = only_idea(bot)
     assert idea.maintainer == "bob" and not bot.router.overdue(idea.waiting_since, datetime.now(UTC))
+
+
+def test_publish_loses_to_a_concurrent_deny_without_writing_a_post(make_bot, monkeypatch):
+    bot = make_bot(plan_reply=plan([FREE_LIB]))
+    say(bot, "carol", "Run ktlint before commit")
+    idea = only_idea(bot)
+    say(bot, "alice", "/devex-approve", thread=idea.thread_ref)
+    say(bot, "alice", f"/devex-built {idea.id} done")
+    real = post.filename
+
+    def deny_meanwhile(i):  # bob sends it back while alice's publish is running
+        say(bot, "bob", f"/devex-deny {idea.id} needs tests")
+        return real(i)
+
+    monkeypatch.setattr(post, "filename", deny_meanwhile)
+    say(bot, "alice", f"/devex-publish {idea.id}")
+    assert only_idea(bot).stage is Stage.BUILDING
+    assert not list(bot.settings.blog.dir.glob("*.md"))
+    assert any("moved on already" in t for t in bot.chat.texts())

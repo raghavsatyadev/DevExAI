@@ -85,3 +85,30 @@ def test_live_column_is_added_to_an_old_database(tmp_path):
     store = Store(path)
     idea = store.ideas.create("carol", "x", "#ai-ideas")
     assert store.ideas.update(idea.id, live="yes").live == "yes"
+
+
+def test_two_admins_demoting_each_other_at_once_leave_one_admin(tmp_path):
+    import threading
+
+    from devexai.config import Maintainer
+    from devexai.store.people import PeopleError
+
+    for _ in range(10):
+        store = Store(tmp_path / f"{_}.db")
+        store.people.seed((Maintainer("a", admin=True), Maintainer("b", admin=True)))
+        start = threading.Barrier(2)
+
+        def demote(name):
+            other = Store(store.db.path)  # separate Database, as a second process would have
+            start.wait()
+            try:
+                other.people.update(name, role="maintainer")
+            except PeopleError:
+                pass
+
+        threads = [threading.Thread(target=demote, args=(n,)) for n in ("a", "b")]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert sum(p.is_admin and p.active for p in store.people.list()) == 1
