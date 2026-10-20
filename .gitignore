@@ -1,6 +1,7 @@
 # Local working notes (machine paths, personal links)
 .claude/PLAN.md
 .claude/settings.local.json
+.claude/.turn-start
 
 # Deck build output and scratch
 .claude/deck/out/
