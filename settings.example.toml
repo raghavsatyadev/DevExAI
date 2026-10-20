@@ -1,0 +1,65 @@
+# Copy to settings.toml and edit. Secrets never go here; put them in .env.
+
+[bot]
+db_path = "data/devexai.db"
+ideas_channel = "#ai-ideas"       # where ideas come in and threads are opened
+public_channel = "#ai-tools"      # where published tools are celebrated
+maintainer_timeout_hours = 24     # reassign if the assigned maintainer stays silent
+
+[chat]
+adapter = "console"               # console (type in this window), none (dashboard only); slack later
+
+[llm]
+provider = "claude_cli"           # runs `claude -p` with all tools disabled
+claude_bin = "claude"
+timeout_seconds = 900
+
+[llm.models]                      # role -> model
+gate = "claude-opus-5-5"
+planner = "claude-opus-5-5"
+
+[fetch]
+max_links = 5
+max_bytes = 1000000
+timeout_seconds = 15
+max_chars_per_page = 20000
+
+[web]                             # dashboard; sign in with email and password
+enabled = true
+host = "127.0.0.1"                # "0.0.0.0" to share it on the company network
+port = 8765
+allowed_hosts = []                # names people type to reach it, e.g. ["devexai.corp.local", "10.0.0.5"]
+tls_cert = ""                     # PEM certificate and key; required when host is not 127.0.0.1
+tls_key = ""
+insecure_http = false             # allow plain HTTP on the network anyway (passwords travel unencrypted)
+
+[blog]                            # each released tool gets a Markdown post here
+dir = "data/blog"
+base_url = ""                     # e.g. "https://blog.example.com/posts" once the site exists
+
+[update]                          # the app updates itself from our server; needs DEVEXAI_LICENCE_KEY in .env
+url = ""                          # e.g. "https://updates.devexai.example/v1"; empty = never check
+check_hours = 24
+
+# Maintainers are copied into the database on the very first start only. After that, admins manage
+# them in the dashboard (People page). The first admin sets their email and password in the
+# one-time setup link printed at start. priya, marcus and lena are fake personas for the pilot.
+[[maintainers]]
+name = "raghav"
+admin = true
+topics = ["ai", "tooling"]
+
+[[maintainers]]
+name = "priya"
+email = "priya@example.com"
+topics = ["android", "mobile"]
+
+[[maintainers]]
+name = "marcus"
+email = "marcus@example.com"
+topics = ["backend", "security"]
+
+[[maintainers]]
+name = "lena"
+email = "lena@example.com"
+topics = ["web", "frontend", "devops"]

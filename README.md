@@ -4,10 +4,13 @@
 > researches it, builds a ready-to-install tool for the AI coding assistants the company uses, and
 > publishes a short post so everyone can use it. The person who had the idea gets the credit.
 
-Status: **proposal / draft for review**. Nothing is built yet.
+Status: **Phase 1 pilot in progress** (see section 12).
+A first unsigned Windows build exists (`uv run --group build python tools/build.py`); the Linux build comes next.
 
-DevExAI is planned as a **product**. Our company uses it first, but any company can install it on its own
-chat platform, AI accounts and infrastructure (see section 9).
+DevExAI is a **product** sold to companies. Our company uses it first. Each customer hosts it themselves,
+on their own network, server and GPUs, with their own chat platform and AI accounts (see section 9).
+It ships as an installable package for Windows and Linux that walks the admin through setup in the
+web dashboard and keeps itself up to date from our update server.
 
 ---
 
@@ -30,13 +33,17 @@ blog post with install steps. The person who suggested it is thanked in chat and
 | Role | Who | What they do |
 |---|---|---|
 | **Poster** | Any colleague | Sends an idea (text and/or links) to the bot in chat. |
+| **Admins** | One or two people | Set DevExAI up, and add or remove maintainers in the web dashboard. An admin is also a maintainer. |
 | **Maintainers** | A small group (several people) | Approve paid resources and logins, approve releases, handle anything the AI is unsure about, and keep the project summaries up to date. One maintainer is assigned per idea. |
 | **The bot** | DevExAI | Does the safety check, research, planning, building, testing, publishing and all notifications. |
 | **Readers** | Everyone | Read the blog post and install the tool into their project or their whole machine. |
 
+Maintainers sign in to the **web dashboard** with email and password (Slack sign-in later) to see every
+idea, act on it, and keep project summaries up to date. Everything they can do there they can also do
+in chat.
+
 **Picking a maintainer for each idea:** by topic area if one matches (e.g. Android, backend, security),
-otherwise round-robin. If the assigned maintainer does not respond within an agreed time (e.g. one
-working day), the bot reassigns to the next maintainer and tells everyone involved.
+otherwise round-robin. If the assigned maintainer does not respond within 24 hours, the bot reassigns to the next maintainer and tells everyone involved.
 
 ## 4. How an idea travels (step by step)
 
@@ -78,6 +85,12 @@ company laptop.
 > The same safety check runs again on the finished code (Step 6), because a safe idea can still produce
 > unsafe code.
 
+**Built live, if the poster wants.** Once the safety gate passes, the bot asks the poster whether the tool
+should be built **live, in public**. If yes, the bot's questions go to the poster in the idea's thread
+and the poster can steer it with their own suggestions; each suggestion passes the safety gate before
+the bot uses it. If no (or no answer), the maintainer handles the questions. Work never waits for the
+answer.
+
 ### Step 2 — Understand and research
 The planner reads the links, searches for related tools that already exist, and checks for duplicates
 (a similar tool already published, or an existing idea in progress). It also uses a **summary of each
@@ -118,8 +131,8 @@ Opus; if Opus gets stuck, it escalates to the maintainer.
 
 ### Step 7 — Publish and celebrate
 - The tool goes into a company repository (e.g. `devexai-tools`) with a version number.
-- The bot writes a **short blog post**: what it does, who it helps, a 30-second install, an example, and
-  "**Idea by @poster**".
+- The bot writes a **short blog post** as a Markdown file: what it does, who it helps, a 30-second
+  install, an example, and "**Idea by @poster**". Any website, wiki or Git host can show it.
 - The bot posts in the idea's thread and in a public channel congratulating the poster.
 
 ## 5. Keeping people informed
@@ -163,7 +176,7 @@ change before doing it, and has a matching `devex uninstall`.
 |---|---|---|
 | Safety gate | A strong model (Claude) + standard malware/secret scanners | Safety mistakes are expensive. |
 | Research and planning | Claude Opus | Best reasoning; used only for thinking, not bulk typing. |
-| Writing code | Gemini Flash (default); DeepSeek or a local model optional | Cheap and fast for following a clear plan. |
+| Writing code | Gemini Flash (default); a local model optional (DeepSeek off for now) | Cheap and fast for following a clear plan. |
 | Code review | **Claude Opus only** | Catches mistakes the builder made. A cheaper model never reviews code, and never reviews its own work. |
 | Blog post | Cheap model, checked by Opus | Short text, low risk. |
 | Experiments / evals | Local models on a 24 GB GPU | Free to run once the GPU is bought. |
@@ -179,8 +192,8 @@ Every outside piece is a plug-in part. A company picks its own in one settings f
 | **AI accounts** | Claude, Gemini and ChatGPT, through subscription accounts and/or API keys (see below). |
 | **Code host** | GitHub, GitLab, Bitbucket, Azure DevOps, or a self-hosted Git server. |
 | **Secret store** | HashiCorp Vault, or the AWS, Google Cloud or Azure secret manager. |
-| **Blog / website** | The company's own website, wiki, or any site the bot can publish to. |
-| **Where the bot runs** | Any cloud VM, the company's own servers, or a container (Docker/Kubernetes). |
+| **Blog / website** | Posts are Markdown files, so any site can show them: a static site, a wiki, or the Git host's own file view. |
+| **Where the bot runs** | The company's own server on its own network (with in-house GPUs for local models), installed from a Windows or Linux package that updates itself from our server; a container also works. The dashboard is shared on the company network over HTTPS. |
 
 ### Using several AI accounts and API keys
 The bot can hold **several subscription accounts and API keys per AI provider** (an "account pool"):
@@ -200,12 +213,12 @@ The bot can hold **several subscription accounts and API keys per AI provider** 
 and keep our code under company terms. Opus planning and review use the most of the Claude quota. More
 accounts or API keys can be added to the pool when the bot gets busy.
 **Optional extras:**
-- DeepSeek, for cheap extra building capacity. Off by default; see open question 1.
+- DeepSeek, for cheap extra building capacity. Off for now; it may later be offered as a self-hosted
+  option in the setup.
 - One machine with a 24 GB GPU for local models and testing.
 
 Also needed: a bot app on the chat platform (usually free), a small always-on server or cloud VM to run
-the bot, a company Git repository for the tools, and a blog website (ours will be custom-built; details
-decided later).
+the bot, a company Git repository for the tools, and a place to show the Markdown blog posts.
 
 ## 11. Rules the bot always follows
 
@@ -222,10 +235,10 @@ decided later).
 
 | Phase | What | Time (rough) |
 |---|---|---|
-| 1. Pilot | Slack intake (our platform), safety gate, plan + human-built tool, manual blog post. One team. | 2–3 weeks |
+| 1. Pilot | Slack intake (our platform), safety gate, plan + human-built tool, blog post written as a Markdown file. One team. | 2–3 weeks |
 | 2. Automate building | Cheap-model builder, tests, Opus review, auto blog post, install command, account pool. | 3–4 weeks |
 | 3. Company-wide | All teams, multiple maintainers with rotation, more AI assistants supported. | ongoing |
-| 4. Product | Second chat platform (e.g. Microsoft Teams), settings file for all plug-in parts, setup guide for other companies. | after phase 3 |
+| 4. Product | Installable package for Windows and Linux with guided setup in the dashboard and a built-in updater; second chat platform (e.g. Microsoft Teams); self-hosted models (such as DeepSeek) as a setup option. | after phase 3 |
 | 5. Local models | Add the GPU machine for cheap building and evals, if usage justifies it. | when needed |
 
 **How we will know it works:** number of ideas submitted, % shipped, installs per tool, time from idea to
@@ -245,11 +258,18 @@ release, cost per shipped tool, and a short "was this useful?" button on every p
 
 ## 14. Open questions for the maintainers
 
-1. **DeepSeek (optional).** The plan works without it. If we turn it on: its hosted service is outside
-   our usual vendors, so either use it only for work that touches no company code, or run DeepSeek's
-   open models on our own GPU.
-2. **Blog website.** It will be our own custom-built site. Design, hosting and how the bot publishes to
-   it are decided later.
-3. Who are the first maintainers, and what is the response time we promise? (Parked for now.)
-4. **How we offer the product to other companies:** they host it themselves, we host it for them, or
-   both.
+Decided:
+- DeepSeek is off for now. Self-hosted models may become a setup option.
+- Blog posts are Markdown files.
+- Each company hosts DevExAI itself, on its own network, from an installable package for Windows and
+  Linux with guided setup and self-update.
+- The pilot's admin and first maintainer is Raghav; the other maintainers are placeholders for now.
+- The poster chooses whether their tool is built live in public.
+- Dashboard sign-in is email and password for now; Slack sign-in later.
+- Maintainers answer within 24 hours; after that the bot reassigns the idea.
+- The Windows package will be code-signed; the certificate is bought later, so early builds are unsigned.
+- Updates come from our own server, since DevExAI is a paid service: only licensed customers can
+  download them. On Windows and Linux alike the app updates itself: it checks our server with the
+  customer's licence key.
+
+No questions are open right now.

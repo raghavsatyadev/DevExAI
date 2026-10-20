@@ -1,5 +1,6 @@
 # Local working notes (machine paths, personal links)
 .claude/PLAN.md
+.claude/DECISIONS.md
 .claude/settings.local.json
 .claude/.turn-start
 
@@ -14,3 +15,14 @@ Thumbs.db
 desktop.ini
 .DS_Store
 ~$*.pptx
+
+# Bot runtime
+.env
+data/
+.venv/
+.pytest_cache/
+/settings.toml
+
+# Packaging output
+/dist/
+/build/
