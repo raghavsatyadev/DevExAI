@@ -61,6 +61,8 @@ def render(idea: Idea, *, maintainer: str, note: str = "", today: str | None = N
     for heading, key in (("## Works with", "assistants"), ("## What you get", "deliverables")):
         if items := [md(x) for x in plan.get(key) or [] if str(x).strip()]:
             parts += [heading, "\n".join(f"- {x}" for x in items)]
+    if files := [md(f.get("path")) for f in (idea.build or {}).get("files") or []]:
+        parts += ["## Files", "\n".join(f"- {x}" for x in files)]
     parts += ["## Install", md(note) if note else
               f"Install steps are coming with the install command. Until then, ask @{md(maintainer)}."]
     return "\n\n".join(parts) + "\n"

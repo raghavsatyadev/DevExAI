@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS meta (
 
 
 # Columns added after the first release: (table, column, definition).
-_ADDED_COLUMNS = (("ideas", "live", "TEXT"),)
+_ADDED_COLUMNS = (("ideas", "live", "TEXT"), ("ideas", "build_json", "TEXT"))
 
 
 def _migrate(conn: sqlite3.Connection) -> None:

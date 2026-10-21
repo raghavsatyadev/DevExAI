@@ -31,7 +31,8 @@ class LLMSettings:
     timeout_seconds: int = 900
     recordings: str = ""  # folder: claude_cli saves its replies there, provider "replay" answers from it
     models: dict[str, str] = field(
-        default_factory=lambda: {"gate": "claude-opus-5-5", "planner": "claude-opus-5-5"}
+        default_factory=lambda: {"gate": "claude-opus-5-5", "planner": "claude-opus-5-5",
+                                 "builder": "claude-opus-5-5", "reviewer": "claude-opus-5-5"}
     )
 
     def model_for(self, role: str) -> str:
@@ -88,6 +89,12 @@ class Settings:
     blog: BlogSettings = field(default_factory=BlogSettings)
     update: UpdateSettings = field(default_factory=UpdateSettings)
     maintainers: tuple[Maintainer, ...] = ()
+    build_by: str = "bot"  # "bot": the AI writes the tool after approval; "person": a person builds it
+
+    @property
+    def builds_dir(self) -> Path:
+        """The built tools' files, one folder per idea, next to the database."""
+        return self.db_path.parent / "builds"
 
 
 def load_dotenv(path: Path) -> None:
@@ -138,6 +145,9 @@ def load_settings(path: Path) -> Settings:
     if not maintainers:
         raise ValueError(f"{path}: at least one [[maintainers]] entry is required")
     defaults = LLMSettings()
+    build_by = data.get("build", {}).get("by", "bot")
+    if build_by not in ("bot", "person"):
+        raise ValueError(f'{path}: [build] by must be "bot" or "person", not {build_by!r}')
     return Settings(
         db_path=Path(bot.get("db_path", "data/devexai.db")),
         ideas_channel=bot.get("ideas_channel", "#ai-ideas"),
@@ -156,4 +166,5 @@ def load_settings(path: Path) -> Settings:
         blog=BlogSettings(dir=Path(blog.get("dir", "data/blog")), base_url=blog.get("base_url", "")),
         update=UpdateSettings(**data.get("update", {})),
         maintainers=maintainers,
+        build_by=build_by,
     )

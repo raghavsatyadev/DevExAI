@@ -12,8 +12,8 @@ from ..config import Settings
 from ..llm import LLMProvider
 from ..stages import LABELS, TERMINAL, Stage
 from ..store import Idea, Store
-from . import commands
-from .pipeline import GATE, PLAN, Job, Pipeline
+from . import building, commands
+from .pipeline import BUILD, GATE, PLAN, Job, Pipeline
 from .routing import Router
 
 log = logging.getLogger(__name__)
@@ -134,6 +134,8 @@ class Bot:
         """Admin clean-up: drop the idea and the bot's posts about it. Others' chat messages stay."""
         if idea.stage in (Stage.RECEIVED, Stage.SAFETY_CHECK, Stage.RESEARCHING):
             raise ValueError(f"{idea.label} is in an AI step right now; stop it first, then delete.")
+        if idea.stage is Stage.BUILDING and (idea.build or {}).get("pending"):
+            raise ValueError(f"The bot is building {idea.label} right now; stop it first, then delete.")
         removed = ""
         clean = getattr(self.chat, "delete_thread", None)
         if clean and idea.thread_ref:
@@ -143,6 +145,7 @@ class Bot:
                 log.exception("could not delete the chat thread of %s", idea.label)
                 removed = f" Chat messages were not removed ({e})."
         self.store.ideas.delete(idea.id)
+        building.forget(self, idea)
         self.store.audit.add(None, actor, "idea:deleted", f"#{idea.id} {idea.title or idea.text[:80]}")
         return f"Deleted {idea.label}.{removed}"
 
@@ -183,6 +186,8 @@ class Bot:
                 self.pipeline.submit(Job(GATE, idea.id))
             elif idea.stage is Stage.RESEARCHING:
                 self.pipeline.submit(Job(PLAN, idea.id))
+            elif idea.stage is Stage.BUILDING and (idea.build or {}).get("pending") and building.by_bot(self):
+                self.pipeline.submit(Job(BUILD, idea.id))
 
 
 def _words(text: str) -> str:

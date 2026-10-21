@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import LLMError, LLMProvider
+from .samples import SAMPLES
 
 
 def _fit(reply: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
@@ -25,6 +26,8 @@ class ReplayLLM:
 
     def complete(self, role: str, system: str, prompt: str, schema: dict[str, Any]) -> dict[str, Any]:
         path = self.dir / f"{role}.json"
+        if not path.exists() and role in SAMPLES:  # nothing recorded for this step yet
+            return _fit(SAMPLES[role], schema)
         try:
             reply = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as e:

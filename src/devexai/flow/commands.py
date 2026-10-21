@@ -6,11 +6,11 @@ import re
 from typing import TYPE_CHECKING
 
 from ..chat import Button, Event
-from ..plan.planner import FREE, needs_approval
+from ..plan.planner import needs_approval
 from ..stages import LABELS, TERMINAL, InvalidTransition, Stage
 from ..store import Idea
-from . import post
-from .pipeline import PLAN, POSTER, Job, ask_live, ask_poster
+from . import building, post
+from .pipeline import BUILD, PLAN, POSTER, Job, ask_live, ask_poster
 
 if TYPE_CHECKING:
     from .bot import Bot
@@ -23,8 +23,8 @@ HELP = """DevExAI commands:
   /devex-suggest [id] <change>     re-plan with a suggestion (maintainers; the poster in a live build)
 Maintainers:
   /devex-approve [id]              allow after an unsure safety check, approve a plan or its paid/login resources
-  /devex-deny [id] <reason>        reject, deny resources, or send a built tool back with changes
-  /devex-built [id] [note]         the tool is built; it goes to review
+  /devex-deny [id] <reason>        reject, deny resources, or send a built tool back (the bot rebuilds it)
+  /devex-built [id] [note]         a person built it (or checked the bot's); it goes to review
   /devex-publish [id] [install]    release it: writes the blog post (Markdown) and announces it
   /devex-assign [id] <maintainer>  hand the idea to another maintainer
   /devex-projects [list | show <name> | set <name> <summary> | remove <name>]"""
@@ -156,10 +156,8 @@ def _cmd_approve(bot: Bot, event: Event, rest: str) -> None:
 
 
 def _start_building(bot: Bot, idea: Idea, why: str, actor: str) -> None:
-    free = [r["name"] for r in (idea.plan or {}).get("resources", []) if r.get("lane") == FREE]
-    used = f" Free resources, used automatically: {', '.join(free)}." if free else ""
-    bot.move(idea, Stage.BUILDING, f"{why}{used}\nA person builds the tool now, with tests and a short "
-             f"README. When it is ready: `/devex-built {idea.id}`.", actor=actor)
+    if building.start(bot, idea, why, actor):
+        bot.pipeline.submit(Job(BUILD, idea.id))
 
 
 def _cmd_deny(bot: Bot, event: Event, rest: str) -> None:
@@ -177,8 +175,8 @@ def _cmd_deny(bot: Bot, event: Event, rest: str) -> None:
         bot.move(idea, Stage.STOPPED, f"{who} denied it: {reason}\n(To re-plan instead, use /devex-suggest.)",
                  actor=event.user)
     elif idea.stage is Stage.UNDER_REVIEW:
-        bot.move(idea, Stage.BUILDING, f"{who} asked for changes: {reason}\nWhen fixed: `/devex-built {idea.id}`.",
-                 actor=event.user)
+        if building.send_back(bot, idea, reason, event.user):
+            bot.pipeline.submit(Job(BUILD, idea.id))
     else:
         raise Refusal(f"{idea.label} is {LABELS[idea.stage]}; there is nothing to deny.")
 
@@ -228,7 +226,9 @@ def _cmd_built(bot: Bot, event: Event, rest: str) -> None:
     idea, note = _target(bot, event, rest)
     if idea.stage is not Stage.BUILDING:
         raise Refusal(f"{idea.label} is {LABELS[idea.stage]}, not being built.")
-    text = f"Built by {bot.chat.mention(event.user)}. {note}".strip()
+    if (idea.build or {}).get("pending"):
+        raise Refusal(f"The bot is still building {idea.label}; wait for its report.")
+    text =f"Built by {bot.chat.mention(event.user)}. {note}".strip()
     bot.move(idea, Stage.UNDER_REVIEW, f"{text}\nMaintainer: review the code, then "
              f"`/devex-publish {idea.id} [install steps]`, or `/devex-deny {idea.id} <changes needed>`.",
              actor=event.user, buttons=(Button("Publish", f"/devex-publish {idea.id}"),
@@ -239,6 +239,7 @@ def _cmd_publish(bot: Bot, event: Event, rest: str) -> None:
     idea, note = _target(bot, event, rest)
     if idea.stage is not Stage.UNDER_REVIEW:
         raise Refusal(f"{idea.label} is {LABELS[idea.stage]}; only a reviewed tool can be published.")
+    note = note or (idea.build or {}).get("install", "")
     blog = bot.settings.blog
     name = post.filename(idea)
     if (blog.dir / name).exists():

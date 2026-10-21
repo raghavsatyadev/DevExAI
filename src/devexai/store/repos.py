@@ -29,6 +29,7 @@ class Idea:
     waiting_since: str | None
     created_at: str
     updated_at: str
+    build: dict[str, Any] | None = None  # what the bot built: files, review, request (Phase 2)
 
     @property
     def label(self) -> str:
@@ -44,10 +45,11 @@ def _row_to_idea(row) -> Idea:
         plan=json.loads(row["plan_json"]) if row["plan_json"] else None,
         blog_url=row["blog_url"], live=row["live"], stop_reason=row["stop_reason"],
         waiting_since=row["waiting_since"], created_at=row["created_at"], updated_at=row["updated_at"],
+        build=json.loads(row["build_json"]) if row["build_json"] else None,
     )
 
 
-_UPDATABLE = {"thread_ref", "maintainer", "topic", "title", "gate", "plan", "blog_url", "live", "stop_reason"}
+_UPDATABLE = {"thread_ref", "maintainer", "topic", "title", "gate", "plan", "blog_url", "live", "stop_reason", "build"}
 
 
 class IdeaRepo:
@@ -102,7 +104,7 @@ class IdeaRepo:
             raise ValueError(f"cannot update {sorted(unknown)}")
         cols, vals = [], []
         for key, value in fields.items():
-            if key in ("gate", "plan"):
+            if key in ("gate", "plan", "build"):
                 key, value = f"{key}_json", None if value is None else json.dumps(value)
             cols.append(f"{key} = ?")
             vals.append(value)

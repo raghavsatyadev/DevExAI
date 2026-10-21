@@ -1,4 +1,4 @@
-"""The AI steps (safety gate, planning) run here, one job at a time, off the chat thread."""
+"""The AI steps (safety gate, planning, building) run here, one job at a time, off the chat thread."""
 
 from __future__ import annotations
 
@@ -13,13 +13,14 @@ from ..gate import safety
 from ..llm import LLMError
 from ..plan import planner
 from ..stages import LABELS, InvalidTransition, Stage
+from . import building
 
 if TYPE_CHECKING:
     from .bot import Bot
 
 log = logging.getLogger(__name__)
 
-GATE, PLAN = "gate", "plan"
+GATE, PLAN, BUILD = "gate", "plan", "build"
 MAINTAINER, POSTER = "maintainer", "poster"
 _PAST_GATE = frozenset({Stage.RESEARCHING, Stage.PLAN_READY, Stage.WAITING_APPROVAL, Stage.BUILDING,
                         Stage.UNDER_REVIEW, Stage.PUBLISHED})
@@ -62,7 +63,7 @@ class Pipeline:
 
     def run(self, job: Job) -> None:
         try:
-            {GATE: self._gate, PLAN: self._plan}[job.kind](job)
+            {GATE: self._gate, PLAN: self._plan, BUILD: self._build}[job.kind](job)
         except InvalidTransition as e:  # someone stopped or moved the idea meanwhile
             log.info("job %s skipped: %s", job, e)
         except Exception:  # one bad job must not kill the worker
@@ -141,6 +142,10 @@ class Pipeline:
         idea = bot.move(idea, Stage.PLAN_READY, planner.format_plan(plan) + "\n\n" + _PLAN_READY,
                         buttons=_plan_buttons(idea.id))
         ask_poster(bot, idea)
+
+    # Step 5
+    def _build(self, job: Job) -> None:
+        building.run(self.bot, job.idea_id)
 
     def _poster_note_safe(self, idea, note: str) -> bool:
         """A poster's suggestion is new untrusted text, so it passes the safety gate like the idea did."""

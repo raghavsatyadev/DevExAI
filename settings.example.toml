@@ -18,6 +18,11 @@ timeout_seconds = 900
 [llm.models]                      # role -> model
 gate = "claude-opus-5-5"
 planner = "claude-opus-5-5"
+builder = "claude-opus-5-5"        # writes the tool's files after the plan is approved
+reviewer = "claude-opus-5-5"       # checks what the builder wrote (code review stays on Opus)
+
+[build]
+by = "bot"                        # "bot": the AI writes the tool and another AI reviews it; "person": a person builds it
 
 [fetch]
 max_links = 5

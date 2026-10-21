@@ -63,7 +63,8 @@ class Client:
 def make_server(tmp_path, passwords=True):
     settings = Settings(maintainers=(Maintainer("alice", ("android",), "alice@example.com", admin=True),
                                      Maintainer("bob", (), "bob@example.com")),
-                        blog=BlogSettings(dir=tmp_path / "blog"))
+                        blog=BlogSettings(dir=tmp_path / "blog"), db_path=tmp_path / "devexai.db",
+                        build_by="person")
     bot = Bot(settings, Store(":memory:"), FakeChat(), StubLLM({"gate": GATE, "planner": PLAN}), inline_jobs=True)
     if passwords:
         bot.store.people.set_password("alice", PASSWORD)

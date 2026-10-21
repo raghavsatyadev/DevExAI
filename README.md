@@ -6,6 +6,8 @@
 
 Status: **Phase 1 pilot in progress** (see section 12).
 A first unsigned Windows build exists (`uv run --group build python tools/build.py`); the Linux build comes next.
+First slice of Phase 2: after approval the bot writes the tool's files and Opus reviews them
+(`[build] by = "bot"`); the files are saved, not run, until the sandbox exists.
 
 DevExAI is a **product** sold to companies. Our company uses it first. Each customer hosts it themselves,
 on their own network, server and GPUs, with their own chat platform and AI accounts (see section 9).

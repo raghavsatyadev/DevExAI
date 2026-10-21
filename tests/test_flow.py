@@ -34,7 +34,8 @@ FREE_LIB = {"name": "ktlint", "why": "linting", "paid": False, "needs_account_or
 def make_bot(tmp_path):
     def factory(gate_reply=None, plan_reply=None):
         settings = Settings(maintainers=(Maintainer("alice", ("android",)), Maintainer("bob", ("backend",))),
-                            blog=BlogSettings(dir=tmp_path / "blog", base_url="https://blog.example/posts/"))
+                            blog=BlogSettings(dir=tmp_path / "blog", base_url="https://blog.example/posts/"),
+                            db_path=tmp_path / "devexai.db", build_by="person")
         llm = StubLLM({"gate": gate_reply or gate(), "planner": plan_reply or plan()})
         return Bot(settings, Store(":memory:"), FakeChat(), llm, inline_jobs=True)
     return factory

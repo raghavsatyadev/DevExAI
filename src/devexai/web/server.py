@@ -280,7 +280,9 @@ class _Handler(BaseHTTPRequestHandler):
                 return self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such idea."))
             audit = [{**a, "detail": unmention(a["detail"] or "", bot.store.meta)}
                      for a in bot.store.audit.for_idea(idea.id)]
-            body = pages.idea_page(idea, audit, csrf=sess.csrf, maintainers=names, admin=me.is_admin)
+            folder = bot.settings.builds_dir / str(idea.id)
+            body = pages.idea_page(idea, audit, csrf=sess.csrf, maintainers=names, admin=me.is_admin,
+                                   build_folder=str(folder.resolve()) if folder.is_dir() else "")
             title = f"#{idea.id}"
         else:
             return self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such page."))

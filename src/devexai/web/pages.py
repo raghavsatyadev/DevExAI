@@ -151,6 +151,24 @@ def _plan(plan: dict[str, Any] | None) -> str:
             f'<h3>Open questions</h3>{_list(plan.get("questions", []))}')
 
 
+def _built(build: dict[str, Any] | None, folder: str = "") -> str:
+    """What the bot builder wrote: model output, shown escaped and never run here."""
+    if not build or not build.get("files"):
+        note = f"The last build failed: {e(build['error'])}" if build and build.get("error") else             "The bot is building it now." if build and build.get("pending") else "Nothing built yet."
+        return f'<p class="muted">{note}</p>'
+    rev = build.get("review") or {}
+    safe = "" if rev.get("safe", True) else         f'<p class="late">The reviewing AI found safety problems:</p>{_list(rev.get("safety_issues", []))}'
+    files = "".join(f'<details><summary>{e(f["path"])}</summary><pre>{e(f["content"])}</pre></details>'
+                    for f in build["files"])
+    return (f'<p>{e(build.get("summary"))}</p>{safe}'
+            f'<p>Review by a second AI: <b>{e(rev.get("verdict"))}</b> after {e(build.get("rounds"))} round(s)</p>'
+            f'{_list(rev.get("findings", []))}'
+            f'<p class="late">The tests were written but not run yet (that needs a sandbox).</p>'
+            f'<p>Install: {e(build.get("install"))}<br>Run the tests: <code>{e(build.get("test_command"))}</code></p>'
+            + (f'<p class="muted">Files on the server: {e(folder)}</p>' if folder else "")
+            + f'<h3>Files</h3>{files}')
+
+
 _TONE = {"deny": "danger", "stop": "danger", "suggest": "tonal"}
 
 
@@ -174,7 +192,8 @@ def _actions(idea: Idea, csrf: str, maintainers: list[str]) -> str:
               _form(csrf, idea.id, "suggest", "Re-plan", "Suggest a change", required=True),
               _form(csrf, idea.id, "deny", "Deny", "Why", required=True)]
     if s is Stage.BUILDING:
-        f.append(_form(csrf, idea.id, "built", "Mark built", "Note (optional)"))
+        if not (idea.build or {}).get("pending"):
+            f.append(_form(csrf, idea.id, "built", "Mark built", "Note (optional)"))
     if s is Stage.UNDER_REVIEW:
         f += [_form(csrf, idea.id, "publish", "Publish", "Install steps for the blog post (optional)"),
               _form(csrf, idea.id, "deny", "Send back", "Changes needed", required=True)]
@@ -189,7 +208,7 @@ def _actions(idea: Idea, csrf: str, maintainers: list[str]) -> str:
 
 
 def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers: list[str],
-              admin: bool = False) -> str:
+              admin: bool = False, build_folder: str = "") -> str:
     unchecked = not idea.gate or idea.gate.get("verdict") != "pass"
     facts = [("Stage", stage_pill(idea.stage)), ("Poster", e(idea.poster)), ("Maintainer", e(idea.maintainer)),
              ("Topic", e(idea.topic)), ("Thread", e(idea.thread_ref)), ("Created (UTC)", ts(idea.created_at)),
@@ -208,7 +227,9 @@ def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers
             f'<h2>Idea text{warn}</h2><pre>{e(idea.text)}</pre>'
             f'<h2>Safety check</h2><div class="card">{_gate(idea.gate)}</div>'
             f'<h2>Plan</h2><div class="card">{_plan(idea.plan)}</div>'
-            f'<h2>History</h2><table><tr><th>When (UTC)</th><th>Who</th><th>What</th><th>Detail</th></tr>{log}</table>'
+            + (f'<h2>Built tool</h2><div class="card">{_built(idea.build, build_folder)}</div>' if idea.build else "")
+            + f'<h2>History</h2>'
+            f'<table><tr><th>When (UTC)</th><th>Who</th><th>What</th><th>Detail</th></tr>{log}</table>'
             + (f'<h2>Delete</h2><p class="muted">Removes this idea, its history and the bot&#39;s messages about it in '
                f'chat. People&#39;s own replies stay. Cannot be undone.</p>'
                f'{confirm(csrf, "/delete-idea", "Delete idea", f"Yes, delete #{idea.id}", idea=idea.id)}'
