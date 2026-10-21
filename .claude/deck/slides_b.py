@@ -158,8 +158,8 @@ def s16_rollout(prs, n):
     header(s, "15 · Rollout", "The core is built; next, grow it into a product", n)
     phases = [("Pilot", "Built", "Slack intake (our platform), safety gate, plan, "
                "dashboard, blog post. One team."),
-              ("Automate", "Mostly built", "Built: builder, Opus review, auto post. "
-               "Next: tests in a sandbox, install command, account pool."),
+              ("Automate", "Mostly built", "Built: builder, Opus review, auto post, install command. "
+               "Next: tests in a sandbox, account pool."),
               ("Company-wide", "Next", "All teams, maintainer rotation, more AI "
                "assistants."),
               ("Product", "Started", "Windows package and updater exist. Next: Linux, "
