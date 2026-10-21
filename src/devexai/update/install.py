@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 
@@ -55,6 +56,20 @@ def write_launcher(root: Path) -> Path:
     return path
 
 
+def _remove(dest: Path) -> None:
+    """Delete an old app folder. Windows refuses to delete a file another program still has loaded
+    (seen: a DLL kept open by an unrelated process), but lets it be moved: such files go to .trash,
+    which the next call empties."""
+    trash = dest.parent / ".trash"
+    shutil.rmtree(trash, ignore_errors=True)
+
+    def aside(func, path, exc) -> None:
+        trash.mkdir(exist_ok=True)
+        os.replace(path, trash / f"{uuid.uuid4().hex}-{Path(path).name}")
+
+    shutil.rmtree(dest, onexc=aside)
+
+
 def install(src: Path, root: Path, version: str) -> Path:
     """Copy an unpacked build (the folder holding devexai.exe) into root and make it current."""
     if not (src / EXE).is_file():
@@ -63,7 +78,7 @@ def install(src: Path, root: Path, version: str) -> Path:
     dest = root / app_dir(version)
     if src.resolve() != dest.resolve():
         if dest.exists():
-            shutil.rmtree(dest)
+            _remove(dest)
         shutil.copytree(src, dest)
     set_current(root, dest.name)
     return write_launcher(root)
@@ -102,7 +117,7 @@ def stage(zip_path: Path, root: Path, version: str) -> Path:
         shutil.rmtree(partial, ignore_errors=True)
         raise UpdateError(f"the update zip does not hold {EXE}")
     if dest.exists():
-        shutil.rmtree(dest)
+        _remove(dest)
     os.replace(inner, dest)
     shutil.rmtree(partial, ignore_errors=True)
     set_current(root, dest.name)

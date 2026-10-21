@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import os
 import threading
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -141,6 +142,27 @@ def test_install_writes_launcher(tmp_path):
     launcher = install.install(src, tmp_path / "DevExAI", "0.1.0")
     assert launcher.is_file() and install.current(tmp_path / "DevExAI") == "app-0.1.0"
     assert "current.txt" in launcher.read_text()
+
+
+def test_reinstall_moves_locked_files_aside(tmp_path, monkeypatch):
+    src, root = tmp_path / "unzipped", tmp_path / "DevExAI"
+    src.mkdir()
+    (src / install.EXE).write_bytes(b"new")
+    old = root / "app-0.1.0" / "_internal"
+    old.mkdir(parents=True)
+    (old / "locked.dll").write_bytes(b"old")
+    unlink = os.unlink
+
+    def refuse(path, *args, **kwargs):  # like Windows, for a DLL another program has loaded
+        if str(path).endswith("locked.dll"):
+            raise PermissionError(13, "in use", str(path))
+        return unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(os, "unlink", refuse)
+    install.install(src, root, "0.1.0")
+    assert (root / "app-0.1.0" / install.EXE).read_bytes() == b"new"
+    assert not (root / "app-0.1.0" / "_internal").exists()
+    assert [p.name.endswith("-locked.dll") for p in (root / ".trash").iterdir()] == [True]
 
 
 def test_first_run_copies_example_settings(tmp_path):
