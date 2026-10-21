@@ -28,7 +28,7 @@ from ..flow import commands
 from ..stages import TERMINAL, WAITING_ON_MAINTAINER
 from . import pages, people_pages
 from .auth import SESSION_SECONDS, Session, Sessions, Throttle
-from .blog_routes import blog_get
+from .blog_routes import blog_get, tool_name
 from .get_routes import get_get
 from .people_routes import account_post, people_post, setup_post
 from .slack_routes import slack_get, slack_post
@@ -295,7 +295,8 @@ class _Handler(BaseHTTPRequestHandler):
                      for a in bot.store.audit.for_idea(idea.id)]
             folder = bot.settings.builds_dir / str(idea.id)
             body = pages.idea_page(idea, audit, csrf=sess.csrf, maintainers=names, admin=me.is_admin,
-                                   build_folder=str(folder.resolve()) if folder.is_dir() else "")
+                                   build_folder=str(folder.resolve()) if folder.is_dir() else "",
+                                   tool=tool_name(idea, bot.settings.blog.dir))
             title = f"#{idea.id}"
         else:
             return self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such page."))

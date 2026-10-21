@@ -39,13 +39,21 @@ def published_files(h: _Handler, name: str) -> dict[str, str]:
     return file_map(idea.build)
 
 
+def tool_name(idea, blog_dir) -> str:
+    """The name `devexai install` knows a published tool by; empty when there is nothing to install."""
+    name = post.filename(idea)
+    if idea.stage is Stage.PUBLISHED and (blog_dir / name).is_file() and file_map(idea.build):
+        return blog.tool_slug(name)
+    return ""
+
+
 def tool_list(h: _Handler) -> list[dict]:
     """Published tools for `devexai list` / `devexai install`: one idea, one tool, one name."""
     out = []
     for idea in h.server.bot.store.ideas.in_stage(Stage.PUBLISHED):
         name = post.filename(idea)
-        if (h.server.bot.settings.blog.dir / name).is_file() and file_map(idea.build):
-            out.append({"id": idea.id, "name": blog.tool_slug(name), "post": name, "title": idea.title or "",
+        if slug := tool_name(idea, h.server.bot.settings.blog.dir):
+            out.append({"id": idea.id, "name": slug, "post": name, "title": idea.title or "",
                         "install": (idea.build or {}).get("install", "")})
     return out
 

@@ -208,7 +208,7 @@ def _actions(idea: Idea, csrf: str, maintainers: list[str]) -> str:
 
 
 def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers: list[str],
-              admin: bool = False, build_folder: str = "") -> str:
+              admin: bool = False, build_folder: str = "", tool: str = "") -> str:
     unchecked = not idea.gate or idea.gate.get("verdict") != "pass"
     facts = [("Stage", stage_pill(idea.stage)), ("Poster", e(idea.poster)), ("Maintainer", e(idea.maintainer)),
              ("Topic", e(idea.topic)), ("Thread", e(idea.thread_ref)), ("Created (UTC)", ts(idea.created_at)),
@@ -218,6 +218,9 @@ def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers
         facts.append(("Reason", e(idea.stop_reason)))
     if idea.blog_url:
         facts.append(("Blog post", link_or_text(idea.blog_url)))
+    if tool:  # the one command developers run; the post has the rest
+        facts.append(("Install", f"<code>devexai install {e(tool)}</code> "
+                                 f'<span class="muted">(add --global for every project)</span>'))
     rows = "".join(f"<tr><th>{k}</th><td>{v}</td></tr>" for k, v in facts)
     log = "".join(f'<tr><td class="muted">{ts(a["at"])}</td><td>{e(a["actor"])}</td><td>{e(a["action"])}</td>'
                   f'<td>{e(a["detail"])}</td></tr>' for a in audit)

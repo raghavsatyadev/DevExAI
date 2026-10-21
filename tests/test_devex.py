@@ -171,3 +171,11 @@ def test_receipt_outside_assistant_folders_is_refused(tmp_path):
     (tmp_path / ".devex" / "x.json").write_text(json.dumps({"files": {"src/main.py": "0"}}))
     with pytest.raises(DevexError, match="not touching"):
         tools.uninstall("x", tmp_path, yes=True)
+
+
+def test_idea_page_shows_the_install_command_once_published(web):
+    c = Client(web)
+    c.login()
+    idea = publish(web)
+    name = json.loads(raw(web, "GET", "/blog/tools.json")[1])["tools"][0]["name"]
+    assert f"<code>devexai install {name}</code>" in c.request("GET", f"/idea/{idea.id}")[1]
