@@ -12,7 +12,7 @@ from ..chat import Button
 from ..gate import safety
 from ..llm import LLMError
 from ..plan import planner
-from ..stages import InvalidTransition, Stage
+from ..stages import LABELS, InvalidTransition, Stage
 
 if TYPE_CHECKING:
     from .bot import Bot
@@ -81,7 +81,7 @@ class Pipeline:
         if idea.stage is not Stage.SAFETY_CHECK:
             return  # stopped meanwhile
         try:
-            result = safety.check_idea(bot.llm, bot.current_settings(), idea.text)
+            result = safety.check_idea(bot.llm, bot.current_settings(), idea.text, _earlier(bot, idea))
         except LLMError as e:
             idea = bot.assign(idea, None)
             idea = bot.store.ideas.update(idea.id, gate={"verdict": "error", "error": str(e)})
@@ -93,7 +93,14 @@ class Pipeline:
         idea = bot.assign(idea, result.topic)
         bot.store.audit.add(idea.id, "bot", f"gate_{result.verdict}", "; ".join(result.reasons))
         reasons = "".join(f"\n  - {r}" for r in result.reasons)
-        if result.verdict == safety.PASS:
+        if result.verdict == safety.PASS and result.duplicate_of:
+            same = bot.store.ideas.get(result.duplicate_of)
+            bot.move(idea, Stage.POSSIBLE_DUPLICATE, f"This looks like the same tool as {same.label} "
+                     f"({LABELS[same.stage]}), so it is on hold. {bot.chat.mention(idea.poster)}, to add to it, "
+                     "reply in that idea's thread. Maintainer: if it is a different tool, let it go ahead.",
+                     buttons=(Button("Not a duplicate", f"/devex-approve {idea.id}"),
+                              Button("Same idea, close it", f"/devex-deny {idea.id} duplicate of #{same.id}")))
+        elif result.verdict == safety.PASS:
             idea = bot.move(idea, Stage.RESEARCHING, "Safety check passed. Researching and planning now.")
             ask_live(bot, idea)
             bot.pipeline.submit(Job(PLAN, idea.id))
@@ -151,6 +158,12 @@ class Pipeline:
                  "safety check, so the plan is unchanged. A maintainer can look at it.\n" + _PLAN_READY,
                  buttons=_plan_buttons(idea.id))
         return False
+
+
+def _earlier(bot: Bot, idea) -> list:
+    """Older ideas the gate compares against: only text that passed the gate, nothing stopped or rejected."""
+    seen = _PAST_GATE | {Stage.POSSIBLE_DUPLICATE}
+    return [o for o in bot.store.ideas.list(100) if o.id < idea.id and o.stage in seen]
 
 
 _PLAN_READY = "Maintainer: approve the plan, suggest a change, or stop it."

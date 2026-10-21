@@ -126,8 +126,9 @@ def _cmd_stop(bot: Bot, event: Event, rest: str) -> None:
 def _cmd_approve(bot: Bot, event: Event, rest: str) -> None:
     idea, _ = _target(bot, event, rest)
     who = bot.chat.mention(event.user)
-    if idea.stage is Stage.SAFETY_UNSURE:
-        idea = bot.move(idea, Stage.RESEARCHING, f"{who} allowed it. Researching and planning now.",
+    if idea.stage in (Stage.SAFETY_UNSURE, Stage.POSSIBLE_DUPLICATE):
+        done = "allowed it" if idea.stage is Stage.SAFETY_UNSURE else "says it is not a duplicate"
+        idea = bot.move(idea, Stage.RESEARCHING, f"{who} {done}. Researching and planning now.",
                         actor=event.user)
         if idea.live is None:
             ask_live(bot, idea)
@@ -168,6 +169,9 @@ def _cmd_deny(bot: Bot, event: Event, rest: str) -> None:
     if idea.stage is Stage.SAFETY_UNSURE:
         idea = bot.store.ideas.update(idea.id, stop_reason=reason)
         bot.move(idea, Stage.REJECTED, f"{who} decided it cannot go ahead: {reason}", actor=event.user)
+    elif idea.stage is Stage.POSSIBLE_DUPLICATE:
+        idea = bot.store.ideas.update(idea.id, stop_reason=reason)
+        bot.move(idea, Stage.STOPPED, f"{who} closed it: {reason}", actor=event.user)
     elif idea.stage in (Stage.PLAN_READY, Stage.WAITING_APPROVAL):
         idea = bot.store.ideas.update(idea.id, stop_reason=f"denied: {reason}")
         bot.move(idea, Stage.STOPPED, f"{who} denied it: {reason}\n(To re-plan instead, use /devex-suggest.)",

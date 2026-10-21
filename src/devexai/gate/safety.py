@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..config import Settings
 from ..llm import LLMError, LLMProvider
 from ..llm.quoting import Quoter
 from .fetch import Page, fetch_pages, find_links
+
+if TYPE_CHECKING:
+    from ..store.repos import Idea
 
 PASS, UNSURE, REJECT = "pass", "unsure", "reject"
 OTHER_TOPIC = "other"
@@ -30,6 +33,8 @@ injection_found. A link that could not be fetched is not by itself a reason to r
 reasons: short plain sentences a non-expert can read (empty list is fine for a clean pass).
 title: a short name for the idea, at most 8 words.
 topic: the best match from the allowed list, or "other".
+duplicate_of: the number of an earlier idea (if any are listed) that asks for essentially the same tool:
+the same problem solved the same way. 0 if none. Overlap, a variation or an extension is not a duplicate.
 {data_rule}"""
 
 
@@ -40,6 +45,7 @@ class GateResult:
     topic: str
     title: str
     injection_found: bool
+    duplicate_of: int = 0  # an earlier idea asking for the same tool (0: none)
     pages: list[Page] = field(default_factory=list)
 
     def record(self) -> dict[str, Any]:
@@ -47,7 +53,7 @@ class GateResult:
         return {
             "verdict": self.verdict, "reasons": self.reasons, "topic": self.topic,
             "title": self.title, "injection_found": self.injection_found,
-            "links": [{"url": p.url, "ok": p.ok, "error": p.error, "text": p.text, "truncated": p.truncated}
+            "duplicate_of": self.duplicate_of, "links": [{"url": p.url, "ok": p.ok, "error": p.error, "text": p.text, "truncated": p.truncated}
                       for p in self.pages],
         }
 
@@ -61,6 +67,7 @@ def schema(topics: list[str]) -> dict[str, Any]:
             "topic": {"type": "string", "enum": topics},
             "title": {"type": "string"},
             "injection_found": {"type": "boolean"},
+            "duplicate_of": {"type": "integer"},
         },
         "required": ["verdict", "reasons", "topic", "title", "injection_found"],
         "additionalProperties": False,
@@ -72,7 +79,12 @@ def known_topics(settings: Settings) -> list[str]:
     return topics + [OTHER_TOPIC]
 
 
-def build_prompt(quoter: Quoter, idea_text: str, pages: list[Page]) -> str:
+def listing(ideas: list[Idea]) -> str:
+    """Earlier ideas as one block of (quoted) data, for the duplicate checks."""
+    return "\n".join(f"#{o.id} [{o.stage.value}] {o.title or ''}: {o.text[:300]}" for o in ideas)
+
+
+def build_prompt(quoter: Quoter, idea_text: str, pages: list[Page], earlier: list[Idea] = ()) -> str:
     parts = ["The idea as the employee wrote it:", quoter.quote("idea", idea_text)]
     for page in pages:
         if page.ok:
@@ -81,15 +93,18 @@ def build_prompt(quoter: Quoter, idea_text: str, pages: list[Page]) -> str:
         else:
             # The error can echo server-controlled text, so it is quoted like page content.
             parts += [f"Linked page {page.url} could not be fetched:", quoter.quote(page.url, page.error)]
+    if earlier:
+        parts += ["Earlier ideas (for duplicate_of):", quoter.quote("earlier-ideas", listing(earlier))]
     parts.append("Give your verdict as JSON.")
     return "\n\n".join(parts)
 
 
-def check_text(llm: LLMProvider, settings: Settings, idea_text: str, pages: list[Page]) -> GateResult:
+def check_text(llm: LLMProvider, settings: Settings, idea_text: str, pages: list[Page],
+               earlier: list[Idea] = ()) -> GateResult:
     quoter = Quoter()
     topics = known_topics(settings)
     out = llm.complete(
-        "gate", POLICY.format(data_rule=quoter.rule), build_prompt(quoter, idea_text, pages), schema(topics)
+        "gate", POLICY.format(data_rule=quoter.rule), build_prompt(quoter, idea_text, pages, earlier), schema(topics)
     )
     verdict = out.get("verdict")
     if verdict not in (PASS, UNSURE, REJECT):
@@ -97,6 +112,8 @@ def check_text(llm: LLMProvider, settings: Settings, idea_text: str, pages: list
     injection = bool(out.get("injection_found"))
     if injection and verdict == PASS:
         verdict = UNSURE  # policy floor, even if the model forgot it
+    dup = out.get("duplicate_of")
+    duplicate_of = dup if isinstance(dup, int) and dup in {o.id for o in earlier} else 0
     topic = out.get("topic") if out.get("topic") in topics else OTHER_TOPIC
     return GateResult(
         verdict=verdict,
@@ -104,6 +121,7 @@ def check_text(llm: LLMProvider, settings: Settings, idea_text: str, pages: list
         topic=topic,
         title=str(out.get("title", "")).strip()[:80] or "Untitled idea",
         injection_found=injection,
+        duplicate_of=duplicate_of,
         pages=pages,
     )
 
@@ -116,6 +134,6 @@ def checked_pages(gate: dict[str, Any] | None) -> list[Page]:
     ]
 
 
-def check_idea(llm: LLMProvider, settings: Settings, idea_text: str) -> GateResult:
+def check_idea(llm: LLMProvider, settings: Settings, idea_text: str, earlier: list[Idea] = ()) -> GateResult:
     pages = fetch_pages(find_links(idea_text, settings.fetch.max_links), settings.fetch)
-    return check_text(llm, settings, idea_text, pages)
+    return check_text(llm, settings, idea_text, pages, earlier)

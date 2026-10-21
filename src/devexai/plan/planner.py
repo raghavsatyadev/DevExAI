@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import Settings
+from ..gate import safety
 from ..gate.fetch import Page
 from ..llm import LLMError, LLMProvider
 from ..llm.quoting import Quoter
@@ -76,8 +77,7 @@ def build_prompt(
     else:
         parts.append("No company project summaries are recorded yet.")
     if others:
-        listing = "\n".join(f"#{o.id} [{o.stage.value}] {o.title or ''}: {o.text[:300]}" for o in others)
-        parts += ["Earlier ideas (for the duplicate check):", quoter.quote("earlier-ideas", listing)]
+        parts += ["Earlier ideas (for the duplicate check):", quoter.quote("earlier-ideas", safety.listing(others))]
     parts.append("Write the plan as JSON.")
     return "\n\n".join(parts)
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -46,6 +47,10 @@ class Bot:
 
     # ideas
     def submit_idea(self, event: Event, text: str) -> Idea:
+        if same := self.same_idea(text):  # a repost: no new idea, no AI spend
+            self.reply(event, f"That is the same as idea #{same.id}, which is already {LABELS[same.stage]}. "
+                              f"Follow or add to it in its thread in {self.settings.ideas_channel}.")
+            return same
         idea = self.store.ideas.create(event.user, text, event.channel)
         self.store.audit.add(idea.id, event.user, "submitted", text[:500])
         ref = self.chat.post(
@@ -59,6 +64,13 @@ class Bot:
             self.reply(event, f"Got it: idea #{idea.id}. Updates go in its thread in {self.settings.ideas_channel}.")
         self.pipeline.submit(Job(GATE, idea.id))
         return idea
+
+    def same_idea(self, text: str) -> Idea | None:
+        """An open or published idea with the same words (case, spacing and punctuation aside)."""
+        if not (key := _words(text)):
+            return None
+        return next((i for i in self.store.ideas.list(1000)
+                     if (i.stage not in TERMINAL or i.stage is Stage.PUBLISHED) and _words(i.text) == key), None)
 
     def say(self, idea: Idea, text: str, buttons: tuple[Button, ...] = ()) -> None:
         self.chat.post(self.settings.ideas_channel, text, thread=idea.thread_ref, buttons=buttons)
@@ -171,3 +183,7 @@ class Bot:
                 self.pipeline.submit(Job(GATE, idea.id))
             elif idea.stage is Stage.RESEARCHING:
                 self.pipeline.submit(Job(PLAN, idea.id))
+
+
+def _words(text: str) -> str:
+    return " ".join(re.findall(r"\w+", text.casefold()))

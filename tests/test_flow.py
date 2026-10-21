@@ -185,8 +185,8 @@ def test_timeout_reassigns_to_other_maintainer(make_bot):
 
 def test_routing_round_robin_without_topic(make_bot):
     bot = make_bot(gate_reply=gate(topic="other"))
-    for _ in range(3):
-        say(bot, "carol", "idea")
+    for n in range(3):
+        say(bot, "carol", f"idea {n}")
     assert sorted(i.maintainer for i in bot.store.ideas.list()) == ["alice", "alice", "bob"]
 
 

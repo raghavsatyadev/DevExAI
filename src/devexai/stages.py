@@ -9,6 +9,7 @@ class Stage(StrEnum):
     RECEIVED = "received"
     SAFETY_CHECK = "safety_check"
     SAFETY_UNSURE = "safety_unsure"          # maintainer must decide (Step 1 "Unsure")
+    POSSIBLE_DUPLICATE = "possible_duplicate"  # the gate thinks an earlier idea asks for the same tool
     RESEARCHING = "researching"              # research + planning (Steps 2-3)
     PLAN_READY = "plan_ready"
     WAITING_APPROVAL = "waiting_approval"    # escalation-lane resources (Step 4)
@@ -23,12 +24,14 @@ TERMINAL = frozenset({Stage.PUBLISHED, Stage.REJECTED, Stage.STOPPED})
 
 # Stages where the idea waits on its assigned maintainer (subject to timeout reassignment).
 WAITING_ON_MAINTAINER = frozenset(
-    {Stage.SAFETY_UNSURE, Stage.PLAN_READY, Stage.WAITING_APPROVAL, Stage.UNDER_REVIEW}
+    {Stage.SAFETY_UNSURE, Stage.POSSIBLE_DUPLICATE, Stage.PLAN_READY, Stage.WAITING_APPROVAL, Stage.UNDER_REVIEW}
 )
 
 _NEXT: dict[Stage, frozenset[Stage]] = {
     Stage.RECEIVED: frozenset({Stage.SAFETY_CHECK}),
-    Stage.SAFETY_CHECK: frozenset({Stage.RESEARCHING, Stage.SAFETY_UNSURE, Stage.REJECTED}),
+    Stage.SAFETY_CHECK: frozenset({Stage.RESEARCHING, Stage.SAFETY_UNSURE, Stage.POSSIBLE_DUPLICATE, Stage.REJECTED}),
+    # POSSIBLE_DUPLICATE -> RESEARCHING: a maintainer said it is not a duplicate (-> STOPPED: it is one).
+    Stage.POSSIBLE_DUPLICATE: frozenset({Stage.RESEARCHING}),
     Stage.SAFETY_UNSURE: frozenset({Stage.RESEARCHING, Stage.REJECTED}),
     Stage.RESEARCHING: frozenset({Stage.PLAN_READY}),
     # PLAN_READY/WAITING_APPROVAL -> RESEARCHING: a maintainer suggested an alternative, so re-plan.
@@ -42,6 +45,7 @@ LABELS: dict[Stage, str] = {
     Stage.RECEIVED: "Received",
     Stage.SAFETY_CHECK: "Safety check",
     Stage.SAFETY_UNSURE: "Safety check unsure: waiting for maintainer",
+    Stage.POSSIBLE_DUPLICATE: "Possible duplicate: waiting for maintainer",
     Stage.RESEARCHING: "Researching and planning",
     Stage.PLAN_READY: "Plan ready: waiting for maintainer",
     Stage.WAITING_APPROVAL: "Waiting for resource approval",

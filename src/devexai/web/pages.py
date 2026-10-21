@@ -166,6 +166,9 @@ def _actions(idea: Idea, csrf: str, maintainers: list[str]) -> str:
     if s is Stage.SAFETY_UNSURE:
         f += [_form(csrf, idea.id, "approve", "Allow it"),
               _form(csrf, idea.id, "deny", "Reject", "Why it cannot go ahead", required=True)]
+    if s is Stage.POSSIBLE_DUPLICATE:
+        f += [_form(csrf, idea.id, "approve", "Not a duplicate"),
+              _form(csrf, idea.id, "deny", "Close as duplicate", "Of which idea", required=True)]
     if s in (Stage.PLAN_READY, Stage.WAITING_APPROVAL):
         f += [_form(csrf, idea.id, "approve", "Approve plan" if s is Stage.PLAN_READY else "Approve resources"),
               _form(csrf, idea.id, "suggest", "Re-plan", "Suggest a change", required=True),
