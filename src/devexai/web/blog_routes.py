@@ -9,13 +9,16 @@ from a path on disk, and a requested file name must match one of them exactly.
 from __future__ import annotations
 
 import io
+import json
 import re
 import zipfile
 from http import HTTPStatus
+from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 from ..builder.build import file_map
+from .. import devex
 from ..flow import post
 from ..stages import Stage
 from . import blog, pages
@@ -38,6 +41,17 @@ def published_files(h: _Handler, name: str) -> dict[str, str]:
     return file_map(idea.build)
 
 
+def tool_list(h: _Handler) -> list[dict]:
+    """Published tools for `devex list` / `devex install`: one idea, one tool, one name."""
+    out = []
+    for idea in h.server.bot.store.ideas.in_stage(Stage.PUBLISHED):
+        name = post.filename(idea)
+        if (h.server.bot.settings.blog.dir / name).is_file() and file_map(idea.build):
+            out.append({"id": idea.id, "name": blog.tool_slug(name), "post": name, "title": idea.title or "",
+                        "install": (idea.build or {}).get("install", "")})
+    return out
+
+
 def zip_bytes(files: dict[str, str]) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -51,6 +65,11 @@ def blog_get(h: _Handler, path: str, base_csp: str) -> None:
     html = {"Content-Security-Policy": f"{base_csp}; script-src {blog.SCRIPT_HASH}"}
     if path in ("/blog", "/blog/"):
         return h._send(HTTPStatus.OK, blog.index_page(folder), html)
+    if path == "/blog/tools.json":
+        return h._send_bytes(HTTPStatus.OK, json.dumps({"tools": tool_list(h)}).encode(), "application/json", {})
+    if path == "/blog/devex.py":  # the install command; the source ships next to the package
+        return h._send_bytes(HTTPStatus.OK, Path(devex.__file__).with_suffix(".py").read_bytes(),
+                             "text/x-python; charset=utf-8", {"Content-Disposition": 'attachment; filename="devex.py"'})
     m = _ROUTE.fullmatch(path)
     name = m.group(1) if m else ""
     if m and not m.group(2):

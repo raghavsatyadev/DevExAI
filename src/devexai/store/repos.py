@@ -90,6 +90,11 @@ class IdeaRepo:
             rows = c.execute("SELECT * FROM ideas ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [_row_to_idea(r) for r in rows]
 
+    def in_stage(self, stage: Stage) -> list[Idea]:
+        with self.db.connect() as c:
+            rows = c.execute("SELECT * FROM ideas WHERE stage = ? ORDER BY id", (stage.value,)).fetchall()
+        return [_row_to_idea(r) for r in rows]
+
     def waiting_on_maintainer(self) -> list[Idea]:
         marks = ",".join("?" for _ in WAITING_ON_MAINTAINER)
         with self.db.connect() as c:

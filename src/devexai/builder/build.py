@@ -22,6 +22,11 @@ A maintainer approved the plan below; write the tool it describes.
 
 - Write every file the plan's deliverables need: skills (.claude/skills/<name>/SKILL.md), subagents
   (.claude/agents/<name>.md), slash commands, MCP servers, hooks or small command-line helpers.
+- One idea is one tool, installed with `devex install <tool> --project` (into a project) or `--global`
+  (into the user's home). It copies only files under .claude/, .gemini/ and .codex/, to the same path
+  under the project or home folder, so put everything the assistant needs there: helper scripts inside
+  the skill's own folder, referred to by relative paths. Files elsewhere (README, tests) stay in the
+  download. Settings files such as settings.json are never changed: say any such step in install.
 - Include automated tests and a short README.md: what it does, how to install it, how to run the tests.
 - Keep it small, plain and readable. No network calls, downloads, telemetry or services the plan does
   not list as a resource. Never read, print or send secrets. No obfuscated or encoded code.

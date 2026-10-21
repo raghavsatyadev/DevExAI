@@ -218,7 +218,18 @@ def _tool_cards(name: str, files: dict[str, str], origin: str, ids: Iterator[int
     win = (f"curl.exe --ssl-no-revoke -fLo {slug}.zip {zip_url}; "
            f"if ($?) {{ mkdir {slug} -Force > $null; tar -xf {slug}.zip -C {slug}; del {slug}.zip }}")
     nix = f"curl -fLo {slug}.zip {zip_url} && unzip -d {slug} {slug}.zip && rm {slug}.zip"
-    get = (f'<div class="card" id="get"><h2>Get it</h2>'
+    install = (f'<div class="card" id="install"><h2>Install it</h2>'
+               f'<p>With <a href="/blog/devex.py" download>devex.py</a> (needs Python 3.9 or later). It shows '
+               f'every change and asks before making it. Get it once:</p>'
+               f'<p><b>Windows (PowerShell)</b></p>{code_block(f"curl.exe --ssl-no-revoke -fLO {origin}/blog/devex.py", ids)}'
+               f'<p><b>macOS or Linux</b></p>{code_block(f"curl -fLO {origin}/blog/devex.py", ids)}'
+               f'<p><b>This project only</b>: run it in the project folder. The files can be committed so the '
+               f'whole team gets them.</p>{code_block(f"python devex.py install {slug} --project --server {origin}", ids)}'
+               f'<p><b>My whole machine</b>: the files go into your home folder and work in every project.</p>'
+               f'{code_block(f"python devex.py install {slug} --global --server {origin}", ids)}'
+               f'<p>To remove it: <code data-copy="" title="Click to copy">python devex.py uninstall {slug} '
+               f'--project</code> (or <code>--global</code>).</p></div>')
+    get = install + (f'<div class="card" id="get"><h2>Get the files</h2>'
            f'<div class="row"><a class="btn" href="{base}/files.zip" download>Download all files (.zip)</a></div>'
            f'<p>Or download and unpack it into a <code data-copy="" title="Click to copy">{slug}</code> folder '
            f'with one command.</p><p><b>Windows (PowerShell)</b></p>{code_block(win, ids)}'

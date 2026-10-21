@@ -172,6 +172,14 @@ Every blog post offers two install choices:
 Install is one command (e.g. `devex install <tool> --project` or `--global`), shows exactly what it will
 change before doing it, and has a matching `devex uninstall`.
 
+One idea (one Slack thread) is one tool with one name, the one its blog post shows. `devex` is a single
+Python file (standard library only) that the server hands out at `/blog/devex.py`; each post shows the
+commands. It installs the tool's files under `.claude/`, `.gemini/` and `.codex/` at the same path in the
+project or home folder, never runs anything from the tool and never edits settings files (it prints
+those steps instead). It refuses to overwrite a file that is not the tool's unless asked (`--force`, which
+keeps the old file to put back), and records what it wrote in `.devex/<tool>.json`, so uninstall removes
+exactly that and keeps any file edited since.
+
 ## 8. Which AI does what (and why)
 
 | Job | Model | Why |

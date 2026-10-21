@@ -29,7 +29,8 @@ from PyInstaller.utils.hooks import collect_submodules
 
 a = Analysis([{entry!r}], pathex=[{src!r}],
              hiddenimports=collect_submodules("devexai") + collect_submodules("slack_sdk"),  # imported lazily
-             datas=[({settings!r}, "."), ({icon!r}, "assets/logo")])
+             datas=[({settings!r}, "."), ({icon!r}, "assets/logo"),
+                    ({devex!r}, "devexai")])  # the server hands its source out at /blog/devex.py
 pyz = PYZ(a.pure)
 console = EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexai", console=True, icon={icon!r})
 programs = [console]
@@ -46,7 +47,8 @@ def main() -> None:
     spec = work / "devexai.spec"
     spec.write_text(SPEC.format(entry=str(ROOT / "tools" / "entry.py"), src=str(ROOT / "src"),
                                 settings=str(ROOT / "settings.example.toml"),
-                                icon=str(ROOT / "assets" / "logo" / "devexai.ico")), encoding="utf-8")
+                                icon=str(ROOT / "assets" / "logo" / "devexai.ico"),
+                                devex=str(ROOT / "src" / "devexai" / "devex.py")), encoding="utf-8")
     subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
                     "--distpath", str(dist), "--workpath", str(work), str(spec)], check=True, cwd=ROOT)
     out = dist / f"devexai-{__version__}-{platform_tag()}.zip"
