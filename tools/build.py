@@ -7,7 +7,6 @@ The build is unsigned until we have a code-signing certificate (Windows SmartScr
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 import sys
@@ -21,17 +20,31 @@ from devexai import __version__  # noqa: E402
 from devexai.update.manifest import platform_tag  # noqa: E402
 
 
+# One analysis, two programs sharing one folder: devexai.exe for the terminal and devexaiw.exe, which has
+# no console window and runs as an icon in the notification area (the Start menu entry starts it).
+SPEC = """
+from PyInstaller.utils.hooks import collect_submodules
+
+a = Analysis([{entry!r}], pathex=[{src!r}],
+             hiddenimports=collect_submodules("devexai") + collect_submodules("slack_sdk"),  # imported lazily
+             datas=[({settings!r}, "."), ({icon!r}, "assets/logo")])
+pyz = PYZ(a.pure)
+console = EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexai", console=True, icon={icon!r})
+tray = EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexaiw", console=False, icon={icon!r})
+COLLECT(console, tray, a.binaries, a.datas, name="devexai")
+"""
+
+
 def main() -> None:
     dist, work = ROOT / "dist", ROOT / "build"
     shutil.rmtree(dist / "devexai", ignore_errors=True)
-    subprocess.run([
-        sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--console",
-        "--name", "devexai", "--distpath", str(dist), "--workpath", str(work), "--specpath", str(work),
-        "--paths", str(ROOT / "src"), "--collect-submodules", "devexai",
-        "--collect-submodules", "slack_sdk",  # imported lazily, so the scan alone misses it
-        "--add-data", f"{ROOT / 'settings.example.toml'}{os.pathsep}.",
-        str(ROOT / "tools" / "entry.py"),
-    ], check=True, cwd=ROOT)
+    work.mkdir(exist_ok=True)
+    spec = work / "devexai.spec"
+    spec.write_text(SPEC.format(entry=str(ROOT / "tools" / "entry.py"), src=str(ROOT / "src"),
+                                settings=str(ROOT / "settings.example.toml"),
+                                icon=str(ROOT / "assets" / "logo" / "devexai.ico")), encoding="utf-8")
+    subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
+                    "--distpath", str(dist), "--workpath", str(work), str(spec)], check=True, cwd=ROOT)
     out = dist / f"devexai-{__version__}-{platform_tag()}.zip"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in sorted((dist / "devexai").rglob("*")):

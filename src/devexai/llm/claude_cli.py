@@ -10,6 +10,7 @@ import tempfile
 from typing import Any
 
 from ..config import LLMSettings
+from ..proc import NO_WINDOW
 from .base import LLMError
 
 # Bot secrets the model process never needs. ANTHROPIC_API_KEY is dropped so the CLI uses
@@ -58,6 +59,7 @@ class ClaudeCLI:
                 proc = subprocess.run(
                     args, input=prompt, capture_output=True, cwd=cwd, env=_child_env(),
                     encoding="utf-8", errors="replace", timeout=self.settings.timeout_seconds,
+                    creationflags=NO_WINDOW,
                 )
             except subprocess.TimeoutExpired:
                 raise LLMError(f"{role}: claude timed out after {self.settings.timeout_seconds}s") from None

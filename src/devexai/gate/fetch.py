@@ -6,10 +6,10 @@ import json
 import os
 import re
 import subprocess
-import sys
 from dataclasses import dataclass
 
 from ..config import FetchSettings
+from ..proc import NO_WINDOW, worker_command
 
 _URL = re.compile(r"https?://[^\s<>\"'`]+", re.IGNORECASE)
 # The worker gets only what Python and Windows sockets need; nothing from .env.
@@ -47,12 +47,12 @@ def fetch_pages(urls: list[str], settings: FetchSettings) -> list[Page]:
     }
     overall = settings.timeout_seconds * len(urls) * 3 + 10  # connect + redirects + read, per link
     # a packaged build has no python -m; the exe runs the worker itself (see __main__.py)
-    cmd = [sys.executable, "--fetch-worker"] if getattr(sys, "frozen", False) else         [sys.executable, "-I", "-m", "devexai.gate.fetch_worker"]
+    cmd = worker_command("devexai.gate.fetch_worker", "--fetch-worker")
     try:
         proc = subprocess.run(
             cmd,
             input=json.dumps(job), capture_output=True, env=_worker_env(),
-            encoding="utf-8", errors="replace", timeout=overall,
+            encoding="utf-8", errors="replace", timeout=overall, creationflags=NO_WINDOW,
         )
         pages = json.loads(proc.stdout)["pages"]
     except subprocess.TimeoutExpired:

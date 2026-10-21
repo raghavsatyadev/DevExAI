@@ -16,8 +16,8 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from .. import __version__
-from . import install
+from .. import __version__, home
+from . import install, shortcut
 from .manifest import Release, UpdateError, check_url, parse_version, platform_tag, verify
 
 log = logging.getLogger(__name__)
@@ -93,5 +93,7 @@ def update(server: str, licence: str, root: Path, current: str = __version__) ->
         zip_path = download(rel, server, licence, Path(tmp))
         install.stage(zip_path, root, rel.version)
     install.prune(root, {install.app_dir(rel.version), install.app_dir(current)})
+    if root.resolve() == home.install_root().resolve():  # the real install, not a test folder
+        shortcut.write(root)  # the Start menu entry starts the new version from now on
     log.info("update %s staged; it runs on the next start", rel.version)
     return rel

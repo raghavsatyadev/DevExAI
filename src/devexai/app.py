@@ -71,8 +71,31 @@ def startup_notices(settings: Settings) -> list[str]:
     return []
 
 
+def start_tray(bot: Bot, web, log_path: Path):
+    """The notification-area icon of the windowed build: open the dashboard, the data or the log, quit."""
+    from . import home, tray
+
+    def open_dashboard() -> None:
+        if web:
+            webbrowser.open(web.setup_url or f"{web.base_url}/")
+        else:
+            os.startfile(Path.cwd())
+
+    menu = [("Open dashboard", open_dashboard),
+            ("Open data folder", lambda: os.startfile(Path.cwd())),
+            ("Open log", lambda: os.startfile(log_path.resolve())),
+            None,
+            ("Quit DevExAI", lambda: bot.chat.stop())]  # ends the main loop in run()
+    return tray.create("DevExAI", menu, open_dashboard, home.bundled("assets/logo/devexai.ico"))
+
+
 def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | None = None,
-        open_browser: bool = False, replay: bool = False) -> None:
+        open_browser: bool = False, replay: bool = False, tray: bool = False) -> None:
+    """Run until the chat platform stops (Ctrl+C, or Quit in the tray icon's menu).
+
+    With tray, there is no console: the console chat is replaced by none, and messages that would be
+    printed are shown as notifications next to the icon.
+    """
     load_dotenv(env_path)
     settings = load_settings(settings_path)
     if replay:
@@ -86,6 +109,8 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
     store = Store(settings.db_path)
     store.people.seed(settings.maintainers)
     settings = with_overrides(settings, store.meta)
+    if tray and (adapter or settings.chat_adapter) == "console":
+        adapter = "none"  # nobody can type into a console that is not there
     notices = startup_notices(settings)
     bot = Bot(settings, store, make_chat(settings, store, "none"), make_provider(settings.llm))
     try:
@@ -124,9 +149,17 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
             print(web.startup_message(), flush=True)
             if open_browser and web.setup_url:  # first run: go straight to creating the admin account
                 webbrowser.open(web.setup_url)
+    icon = start_tray(bot, web, log_path) if tray else None
+    if icon:
+        if notices:  # Windows shows one notification at a time, so the warnings go first and together
+            icon.notify("DevExAI needs attention", " ".join(notices), warning=True)
+        else:
+            icon.notify("DevExAI is running", web.startup_message() if web else "The dashboard is off.")
 
     def update_ready(text: str) -> None:
         print(text, flush=True)
+        if icon:
+            icon.notify("DevExAI update", text)
         if web and text not in web.notices:
             web.notices.append(text)
 
@@ -139,6 +172,8 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
                 break
     finally:
         stop.set()
+        if icon:
+            icon.close()
         if hasattr(bot.chat, "stop"):  # e.g. close the Slack socket so its threads do not hold the exit
             bot.chat.stop()
         if web:

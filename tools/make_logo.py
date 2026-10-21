@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -108,12 +109,30 @@ def render_png(svg_path: Path, png_path: Path, width: int, height: int) -> None:
                        check=True, capture_output=True, timeout=120)
 
 
+def write_ico(svg_path: Path, ico_path: Path, sizes: tuple[int, ...] = (16, 24, 32, 48, 64, 256)) -> None:
+    """A Windows icon (exe, tray, Start menu) whose entries are PNGs, which Windows reads since Vista."""
+    with tempfile.TemporaryDirectory() as tmp:
+        images = []
+        for px in sizes:
+            png = Path(tmp) / f"{px}.png"
+            render_png(svg_path, png, px, px)
+            images.append((px, png.read_bytes()))
+    head = struct.pack("<HHH", 0, 1, len(images))
+    offset, entries = len(head) + 16 * len(images), b""
+    for px, data in images:
+        side = 0 if px >= 256 else px  # 0 means 256 in an icon directory
+        entries += struct.pack("<BBBBHHII", side, side, 0, 0, 1, 32, len(data), offset)
+        offset += len(data)
+    ico_path.write_bytes(head + entries + b"".join(data for _, data in images))
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     icon = OUT / "devexai-logo.svg"
     icon.write_text(svg(1024, 1024, mark()), encoding="utf-8")
     for px in (1024, 512, 256):
         render_png(icon, OUT / f"devexai-logo-{px}.png", px, px)
+    write_ico(icon, OUT / "devexai.ico")
     for dark in (False, True):
         name = "devexai-wordmark-dark" if dark else "devexai-wordmark"
         text, w, h = wordmark(dark)
