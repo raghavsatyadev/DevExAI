@@ -145,6 +145,8 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
             print(f"Maintainer dashboard not started: {e}", flush=True)
         else:
             web.notices.extend(notices)
+            if not bot.settings.blog.base_url:  # no blog site yet: the dashboard serves the posts at /blog
+                bot.settings = replace(bot.settings, blog=replace(bot.settings.blog, base_url=f"{web.base_url}/blog"))
             web.start()
             print(web.startup_message(), flush=True)
             if open_browser and web.setup_url:  # first run: go straight to creating the admin account

@@ -26,7 +26,7 @@ from ..chat.slack_ids import unmention
 from ..config import WebSettings
 from ..flow import commands
 from ..stages import TERMINAL, WAITING_ON_MAINTAINER
-from . import pages, people_pages
+from . import blog, pages, people_pages
 from .auth import SESSION_SECONDS, Session, Sessions, Throttle
 from .people_routes import account_post, people_post, setup_post
 from .slack_routes import slack_get, slack_post
@@ -244,6 +244,12 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, people_pages.setup_page(token, admin.name, email=admin.email or ""))
         if url.path == "/login":
             return self._send(HTTPStatus.OK, people_pages.login_page())
+        if url.path in ("/blog", "/blog/"):  # the blog is for everyone: no sign-in
+            return self._send(HTTPStatus.OK, blog.index_page(bot.settings.blog.dir))
+        if url.path.startswith("/blog/"):
+            page = blog.post_page(bot.settings.blog.dir, url.path.removeprefix("/blog/"))
+            return self._send(HTTPStatus.OK, page) if page else \
+                self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such post."))
         signed_in = self._session()
         if signed_in is None:
             return self._redirect("/login")

@@ -15,7 +15,7 @@ from .theme import CSS
 
 _URL = re.compile(r"https?://[^\s<>\"']+")
 
-_NAV = (("/", "Ideas"), ("/maintainers", "Maintainers"), ("/projects", "Projects"))
+_NAV = (("/", "Ideas"), ("/maintainers", "Maintainers"), ("/projects", "Projects"), ("/blog", "Blog"))
 
 
 def e(value: Any) -> str:
