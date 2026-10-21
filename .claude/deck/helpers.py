@@ -148,7 +148,7 @@ def header(slide, kicker, title, number=None):
     if number is not None:
         text(slide, W - MARGIN - 1, H - 0.45, 1, 0.3, str(number), size=11,
              color=MUTED, align="r")
-        text(slide, MARGIN, H - 0.45, 6, 0.3, "DevExAI · proposal draft", size=11,
+        text(slide, MARGIN, H - 0.45, 6, 0.3, "DevExAI, proposal draft", size=11,
              color=MUTED)
 
 

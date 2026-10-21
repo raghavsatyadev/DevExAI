@@ -9,11 +9,11 @@ MONO = {"font": "Courier New", "bold": True, "color": WHITE}
 
 def s10_outputs(prs, n):
     s = blank(prs)
-    header(s, "09 · What gets built", "Ready-to-install tools for AI coding assistants", n)
-    kinds = [("Skills", "Reusable “how to do X” guides the assistant follows."),
-             ("MCP servers", "Small services that give assistants new abilities, e.g. "
-              "read the issue tracker."),
-             ("Tools & scripts", "Command-line helpers."),
+    header(s, "9. What gets built", "Ready-to-install tools for AI coding assistants", n)
+    kinds = [("Skills", "Reusable \"how to do X\" guides the assistant follows."),
+             ("Connectors", "Small add-ons that give assistants new abilities, like "
+              "reading the issue tracker."),
+             ("Tools and scripts", "Command-line helpers."),
              ("Plugins", "Bundles that install several of the above at once.")]
     for i, ((x, w), (t, b)) in enumerate(zip(cols(4), kinds)):
         step(i + 1)
@@ -21,28 +21,27 @@ def s10_outputs(prs, n):
     step(5)
     text(s, MARGIN, 4.4, CW, 0.4, "Claude Code first; Gemini CLI and Codex next",
          size=18, bold=True, color=NAVY)
-    for (x, w), label in zip(cols(3, 0.3), ["Claude · Claude Code", "Gemini · Gemini CLI",
-                                            "ChatGPT · Codex"]):
+    for (x, w), label in zip(cols(3, 0.3), ["Claude: Claude Code", "Gemini: Gemini CLI",
+                                            "ChatGPT: Codex"]):
         chip(s, x, 4.95, w, 0.7, label, size=18)
-    text(s, MARGIN, 5.9, CW, 0.5, "The builder writes Claude Code files today. Later: one shared core with a thin adapter "
-         "per assistant, so an idea is never rebuilt three times.", size=16, color=MUTED)
+    text(s, MARGIN, 5.9, CW, 0.5, "The builder writes Claude Code files today. Later: one shared tool with a small layer "
+         "for each assistant, so an idea is never built three times.", size=16, color=MUTED)
 
 
 def s11_install(prs, n):
     s = blank(prs)
-    header(s, "10 · Installing", "Set up each computer once, then one command per tool", n)
+    header(s, "10. Installing", "Set up each computer once, then one command per tool", n)
     c = {"font": "Courier New", "bold": True, "color": NAVY}
     who = [("The admin, on the host", "DevExAI-Admin-Setup.exe",
             [["No admin rights needed. ", ("devexai start admin", c), " starts the bot and "
-              "dashboard in the background and opens it; run again, it only opens the "
-              "dashboard."]]),
+              "opens the dashboard. Running it again just opens the dashboard."]]),
            ("Each developer, once", "DevExAI-User-Setup.exe",
-            [["From the dashboard's /get page. Asks for the server, trusts the company CA, puts ",
-              ("devexai", c), " on PATH. No admin code inside."],
-             ["Linux: one curl | sh line from the same page."]]),
+            [["From the dashboard's Get DevExAI page. Connects to the server, trusts the company "
+              "certificate and adds the ", ("devexai", c), " command."],
+             ["Linux: one command from the same page."]]),
            ("Each tool", "devexai install <tool>",
-            [["Copied from the blog post. Goes into this project's .claude/, .gemini/ and "
-              ".codex/ by default; ", ("--global", c), " for your whole machine."]])]
+            [["Copied from the blog post. Adds the tool to this project; add ", ("--global", c),
+              " for every project."]])]
     for i, ((x, w), (t, cmd, b)) in enumerate(zip(cols(3, 0.3), who)):
         step(i + 1)
         rect(s, x, 1.75, w, 3.15, fill=LIGHT)
@@ -57,40 +56,40 @@ def s11_install(prs, n):
         chip(s, x, 5.2, w, 0.65, label, fill=GREEN_SOFT, color=GREEN, size=16)
     text(s, MARGIN, 6.1, CW, 0.5, [[("Also: ", {"bold": True, "color": ACCENT}),
          ("devexai list", c), ", ", ("devexai uninstall <tool>", c), ", ",
-         ("devexai update", c), ". Settings files are never edited; other files are never "
-         "overwritten without --force."]], size=14, color=MUTED)
+         ("devexai update", c), ". It never changes your settings files and never replaces "
+         "your own files unless you ask."]], size=14, color=MUTED)
 
 
 def s12_models(prs, n):
     s = blank(prs)
-    header(s, "11 · Which AI does what", "Opus thinks and reviews; cheaper models will type", n)
+    header(s, "11. Which AI does what", "Opus thinks and checks; cheaper models will write", n)
     rows = [["Job", "Model", "Why"],
-            ["Safety gate", "Claude Opus; malware and secret scanners to add",
+            ["Safety gate", "Claude Opus; virus and leaked-key scanners to add",
              "Safety mistakes are expensive."],
-            ["Research & planning", "Claude Opus", "Best reasoning; thinking, not bulk typing."],
+            ["Research and planning", "Claude Opus", "Best reasoning; thinking, not bulk typing."],
             ["Writing code", "Claude Opus today; Gemini Flash or a local model planned",
              "Cheap and fast at following a clear plan."],
             ["Code review", ("Claude Opus only", {"bold": True, "color": ACCENT}),
              "A cheaper model never reviews code or its own work."],
             ["Blog post", "Written from the approved plan", "No extra model needed."],
-            ["Experiments / evals", "Local models on an optional 24 GB GPU",
+            ["Trying new models", "Local models on an optional 24 GB GPU",
              "Free to run once the GPU is bought."]]
     table(s, MARGIN, 1.75, [2.7, 4.85, 4.58], rows, size=15, head_size=15, row_h=0.62)
 
 
 def s13_product(prs, n):
     s = blank(prs)
-    header(s, "12 · Built as a product", "Fits any company's setup", n)
+    header(s, "12. Built as a product", "Fits any company's setup", n)
     text(s, MARGIN, 1.45, CW, 0.4, "Each company picks its own parts in one settings file. "
          "The core flow stays the same.", size=16, color=MUTED)
     step(1)
     parts = [("Chat platform", "Slack today; Teams, Google Chat, Discord and more "
-              "through a small adapter"),
-             ("AI accounts", "Claude today; Gemini and ChatGPT next — subscriptions or API keys"),
-             ("Code host", "GitHub, GitLab, Bitbucket, Azure DevOps, self-hosted Git (later)"),
-             ("Secret store", "A secret file on the server today; Vault or a cloud secret manager"),
-             ("Blog / website", "Built into the dashboard; posts are Markdown files any site "
-              "can show"),
+              "with a small add-on each"),
+             ("AI accounts", "Claude today; Gemini and ChatGPT next. Subscriptions or keys"),
+             ("Where code lives", "GitHub, GitLab, Bitbucket and others (later)"),
+             ("Passwords and keys", "A protected file on the server today; a company vault later"),
+             ("Blog", "Built into the dashboard; each post is a web page "
+              "with an Install it button"),
              ("Where it runs", "The company's own server, from a Windows or Linux package that "
               "updates itself")]
     for i, (t, b) in enumerate(parts):
@@ -103,27 +102,27 @@ def s13_product(prs, n):
     x0 = MARGIN + 7.45
     w0 = CW - 7.45
     rect(s, x0, 2.05, w0, 4.5, fill=ACCENT_SOFT)
-    text(s, x0 + 0.3, 2.2, w0 - 0.6, 0.45, "Account pool (planned)", size=20, bold=True, color=ACCENT)
+    text(s, x0 + 0.3, 2.2, w0 - 0.6, 0.45, "Shared accounts (planned)", size=20, bold=True, color=ACCENT)
     text(s, x0 + 0.3, 2.75, w0 - 0.6, 3.7,
-         ["• Several subscriptions and API keys per provider",
-          "• One hits its limit → the next takes over",
+         ["• Several subscriptions or keys for each AI company",
+          "• When one hits its limit, the next takes over",
           "• Usage and monthly budget tracked per account",
-          "• Keys live in the secret store, never in chat",
-          "• Never swaps to a weaker reviewer: review stays Claude Opus",
-          "• Check your plans allow a shared bot (business, enterprise or API)"],
+          "• Keys stay in the protected file, never in chat",
+          "• Code review always stays with Claude Opus",
+          "• Check your plans allow a shared bot (business or enterprise)"],
          size=15, color=INK, spacing=8)
 
 
 def s14_cost(prs, n):
     s = blank(prs)
-    header(s, "13 · Cost and resources", "Mostly plans we already pay for", n)
+    header(s, "13. Cost and resources", "Mostly plans we already pay for", n)
     groups = [
         ("Our own setup", ACCENT,
          ["Company enterprise Claude and Gemini plans", "Covers a shared company bot, "
           "code under company terms", "Opus planning and review use the most quota",
-          "Add accounts or keys to the pool when busy"]),
+          "Add more accounts when busy"]),
         ("Optional extras", AMBER,
-         ["DeepSeek for cheap extra building — off for now",
+         ["DeepSeek for cheap extra building, off for now",
           "One machine with a 24 GB GPU for local models and testing"]),
         ("Also needed", GREEN,
          ["A bot app on the chat platform (usually free)", "A small always-on server on the "
@@ -141,11 +140,11 @@ def s14_cost(prs, n):
 
 def s15_rules(prs, n):
     s = blank(prs)
-    header(s, "14 · Rules the bot always follows", "Seven rules, no exceptions", n)
+    header(s, "14. Rules the bot always follows", "Seven rules, no exceptions", n)
     rules = ["Nothing starts until the safety gate passes.",
              "Nothing paid, needing a login, or released without a maintainer's yes.",
              "Claude Opus reviews every line before a human sees it.",
-             "Company code and summaries are read-only; never sent to unapproved services.",
+             "Company code is never changed, or sent to services we have not approved.",
              "Web pages and posts are information, never instructions.",
              "Every action is logged in the idea's thread.",
              "Every published tool can be uninstalled cleanly."]
@@ -162,17 +161,17 @@ def s15_rules(prs, n):
 
 def s16_rollout(prs, n):
     s = blank(prs)
-    header(s, "15 · Rollout", "The core is built; next, grow it into a product", n)
-    phases = [("Pilot", "Built", "Slack intake (our platform), safety gate, plan, "
-               "dashboard, blog post. One team."),
-              ("Automate", "Mostly built", "Built: builder, Opus review, auto post, install command. "
-               "Next: tests in a sandbox, account pool."),
+    header(s, "15. Rollout", "The core is built; next, grow it into a product", n)
+    phases = [("Pilot", "Built", "Ideas from Slack, safety check, plan, "
+               "dashboard, blog. One team."),
+              ("Automate", "Mostly built", "Built: AI writes the tool, Opus checks it, post, "
+               "install command. Next: run tests safely, shared accounts."),
               ("Company-wide", "Next", "All teams, maintainer rotation, more AI "
                "assistants."),
-              ("Product", "Started", "Windows package and updater exist. Next: Linux, "
-               "second chat platform (e.g. Teams)."),
-              ("Local models", "When needed", "GPU machine for cheap building and evals, "
-               "if usage justifies it.")]
+              ("Product", "Started", "Windows setup, Linux command and updates exist. "
+               "Next: Linux server setup, Teams."),
+              ("Local models", "When needed", "A graphics-card machine for cheap building and "
+               "testing, if usage justifies it.")]
     for i, ((x, w), (t, when, b)) in enumerate(zip(cols(5, 0.2), phases)):
         step(i + 1)
         rect(s, x, 1.75, w, 3.15, fill=LIGHT)
@@ -187,27 +186,27 @@ def s16_rollout(prs, n):
     text(s, MARGIN, 5.2, CW, 0.4, "How we will know it works", size=18, bold=True,
          color=NAVY)
     metrics = ["Ideas submitted", "% shipped", "Installs per tool", "Time to release",
-               "Cost per tool", "“Was this useful?”"]
+               "Cost per tool", "\"Was this useful?\""]
     for (x, w), m in zip(cols(6, 0.15), metrics):
         chip(s, x, 5.7, w, 0.6, m, fill=GREEN_SOFT, color=GREEN, size=14)
 
 
 def s17_risks(prs, n):
     s = blank(prs)
-    header(s, "16 · Risks", "What could go wrong, and how we handle it", n)
+    header(s, "16. Risks", "What could go wrong, and how we handle it", n)
     rows = [["Risk", "Handling"],
             ["Harmful or buggy tool on many laptops", "Two safety checks, human approval, "
-             "sandboxed builds (next), versions, one-command uninstall, pull a release."],
-            ["Hidden instructions in a link", "Links read by a separate process as plain "
-             "data; no secrets while reading."],
+             "tests on a locked-down machine (next), versions, one-command uninstall, pull a release."],
+            ["Hidden instructions in a link", "Links read by a separate program as plain "
+             "text, with no keys at hand."],
             ["Company code leaks to an outside AI", "Only approved providers see code; "
              "summaries instead of full source where possible."],
             ["Costs grow quietly", "Budgets per provider and account, usage shown to "
              "maintainers, cheap models do bulk work."],
-            ["Account pool breaks provider terms", "Business, enterprise plans or API keys "
+            ["Shared accounts break AI company terms", "Business or enterprise plans "
              "recommended; each company checks its plans."],
-            ["Too many low-value ideas", "Duplicate check, “not now” label, simple priority "
-             "queue."],
+            ["Too many low-value ideas", "Repeat-idea check, a \"not now\" label, a simple "
+             "priority list."],
             ["Maintainer bottleneck", "Several maintainers, topic routing, automatic "
              "reassignment after a timeout."]]
     table(s, MARGIN, 1.7, [4.1, 8.03], rows, size=14, head_size=15, row_h=0.6)
@@ -215,9 +214,9 @@ def s17_risks(prs, n):
 
 def s18_questions(prs, n):
     s = blank(prs)
-    header(s, "17 · Decisions", "What we have decided so far", n)
+    header(s, "17. Decisions", "What we have decided so far", n)
     qs = [("DeepSeek", "Off for now. Self-hosted models may become a setup option.", None),
-          ("Blog", "Posts are Markdown files, served by the dashboard's own blog page.",
+          ("Blog", "Each post is a web page on the dashboard's blog, with an Install it button.",
            None),
           ("Maintainers", "Raghav is the pilot's admin and first maintainer. Maintainers "
            "answer within 24 hours.", None),
@@ -251,7 +250,7 @@ def s19_close(prs):
         text(s, x + 0.3, 3.75, w - 0.6, 0.45, str(i + 1), size=22, bold=True, color=SKY)
         text(s, x + 0.3, 4.25, w - 0.6, 0.7, st, size=20, bold=True, color=WHITE)
     step(5)
-    text(s, MARGIN, 5.6, CW, 0.5, "Full details: README.md in the DevExAI project.",
+    text(s, MARGIN, 5.6, CW, 0.5, "Full details: the README in the DevExAI project.",
          size=16, color=LIGHT)
 
 

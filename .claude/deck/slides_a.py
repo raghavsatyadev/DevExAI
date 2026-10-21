@@ -18,9 +18,9 @@ def s01_title(prs):
     shade(s, NAVY, 0.82)
     notes(s, "Photo: Annie Spratt on Unsplash (Unsplash License), unsplash.com/photos/QckxruozjRg")
     step(1)
-    text(s, MARGIN, 1.5, 10, 0.4, "PROPOSAL · DRAFT FOR REVIEW", size=14, bold=True,
+    text(s, MARGIN, 1.5, 10, 0.4, "PROPOSAL, DRAFT FOR REVIEW", size=14, bold=True,
          color=SKY)
-    text(s, MARGIN, 2.0, 12, 1.0, "DevExAI — the company AI toolsmith", size=44,
+    text(s, MARGIN, 2.0, 12, 1.0, "DevExAI: the company AI toolsmith", size=44,
          bold=True, color=WHITE)
     step(2)
     text(s, MARGIN, 3.2, 10.5, 1.4,
@@ -29,16 +29,16 @@ def s01_title(prs):
          "The person with the idea gets the credit.", size=20, color=LIGHT, line=1.2)
     step(3)
     for (x, w), label in zip(cols(3, 0.25, 11.0),
-                             ["Claude · Gemini · ChatGPT", "Any chat platform",
+                             ["Claude, Gemini, ChatGPT", "Any chat platform",
                               "Built as a product"]):
         chip(s, x, 5.3, w, 0.55, label, fill=ACCENT, color=WHITE, size=16)
 
 
 def s02_problem(prs, n):
     s = blank(prs)
-    header(s, "01 · The problem", "Good AI tricks get lost in chat", n)
+    header(s, "1. The problem", "Good AI tricks get lost in chat", n)
     items = [
-        ("Found every week", "A blog post, a GitHub repo, a new prompt, a new MCP server "
+        ("Found every week", "A blog post, a code project, a new prompt, a new add-on "
          "that makes AI coding or code review better."),
         ("Then lost", "The knowledge stays in one person's head or disappears in a "
          "chat thread."),
@@ -69,14 +69,14 @@ def s02_problem(prs, n):
 
 def s03_idea(prs, n):
     s = blank(prs)
-    header(s, "02 · The idea", "From a chat message to a ready tool", n)
+    header(s, "2. The idea", "From a chat message to a ready tool", n)
     steps = [
         ("Idea", "Any colleague posts text or links in chat."),
         ("Safety gate", "Strict check before any work starts."),
-        ("Plan", "Claude Opus researches with our project context."),
-        ("Build", "The builder AI writes the code, tests and README."),
-        ("Review", "Opus reviews every line; a human approves."),
-        ("Publish", "Short post with install steps; idea credited."),
+        ("Plan", "Claude Opus reads up and writes a plan."),
+        ("Build", "The AI writes the code, tests and a how-to."),
+        ("Review", "Opus checks every line. A person approves."),
+        ("Publish", "A short post. The poster is named."),
     ]
     bw, gap = 1.62, 0.48
     for i, (t, b) in enumerate(steps):
@@ -100,11 +100,11 @@ def s03_idea(prs, n):
 
 def s04_people(prs, n):
     s = blank(prs)
-    header(s, "03 · Who is involved", "Four roles, one thread per idea", n)
+    header(s, "3. Who is involved", "Four roles, one thread per idea", n)
     roles = [
-        ("Poster", "Any colleague. Sends an idea — text, links, or both — to the bot."),
+        ("Poster", "Any colleague. Sends an idea to the bot: text, links, or both."),
         ("Maintainers", "A small group. Approve plans, paid resources and releases, decide "
-         "unsure cases, own the project summaries. Admins add them in the dashboard."),
+         "unsure cases, keep the project summaries current. Admins add them in the dashboard."),
         ("The bot", "Safety check, research, planning, building, testing, publishing "
          "and every update."),
         ("Readers", "Everyone. Read the post and install the tool for a project or "
@@ -116,8 +116,8 @@ def s04_people(prs, n):
     step(5)
     text(s, MARGIN, 4.6, CW, 0.4, "Picking a maintainer for each idea", size=18, bold=True,
          color=NAVY)
-    flow = ["Topic match (e.g. Android, backend, security)", "Otherwise round-robin",
-            "No reply within 24 hours → next maintainer, everyone told"]
+    flow = ["Topic match, like Android or security", "Otherwise, take turns",
+            "No reply in 24 hours: next maintainer, everyone told"]
     widths = [3.6, 2.6, 5.0]
     x = MARGIN
     for i, (label, w) in enumerate(zip(flow, widths)):
@@ -130,16 +130,16 @@ def s04_people(prs, n):
 
 def s05_steps(prs, n):
     s = blank(prs)
-    header(s, "04 · How an idea travels", "Eight steps, all visible in the idea's thread", n)
+    header(s, "4. How an idea travels", "Eight steps, all visible in the idea's thread", n)
     steps = [
-        ("Submit", "Text and/or links to the bot. Gets a tracking number and a thread."),
+        ("Submit", "Text, links, or both, to the bot. Gets a tracking number and a thread."),
         ("Safety gate", "Nothing starts until the idea and every link pass."),
-        ("Research", "Reads links, flags duplicates, uses project summaries."),
+        ("Research", "Reads links, spots repeat ideas, uses project summaries."),
         ("Plan", "Claude Opus posts a plain-language plan in the thread."),
         ("Resources", "Free is automatic. Paid or login goes to a maintainer."),
-        ("Build & test", "Builder writes code, tests and a README. Running tests in a sandbox is next."),
-        ("Review", "Opus review with a safety check, one fix round, human final yes."),
-        ("Publish", "Versioned release, short blog post, poster credited."),
+        ("Build", "The AI writes the code, tests and a how-to. Running the tests safely is next."),
+        ("Review", "Opus checks safety and quality, one round of fixes, then a person says yes."),
+        ("Publish", "Numbered release, a short blog post, the poster named."),
     ]
     grid = cols(4, 0.25)
     for i, (t, b) in enumerate(steps):
@@ -152,11 +152,11 @@ def s05_steps(prs, n):
 
 def s06_safety(prs, n):
     s = blank(prs)
-    header(s, "05 · Strict safety gate", "Nothing starts before this passes", n)
+    header(s, "5. Strict safety gate", "Nothing starts before this passes", n)
     step(1)
     text(s, MARGIN, 1.7, 6.5, 0.4, "Rejected or flagged", size=18, bold=True, color=NAVY)
     risks = ["Adult content, hate, harassment, violence, policy breaches",
-             "Malware, credential stealers, miners, hidden network calls",
+             "Harmful software, password stealers, hidden data sending",
              "Hidden instructions in web pages aimed at the AI",
              "Requests to leak secrets, customer data or company code",
              "Licences we cannot use, or piracy"]
@@ -178,20 +178,20 @@ def s06_safety(prs, n):
     step(3)
     rect(s, MARGIN, 5.85, CW, 0.75, fill=NAVY)
     text(s, MARGIN + 0.3, 5.85, CW - 0.6, 0.75,
-         "Links are read by a separate process with no secrets, never on a laptop. The "
-         "review checks the finished code for safety again.", size=16, color=WHITE, anchor="m")
+         "Links are read by a separate program that holds no passwords or keys, never on a "
+         "laptop. The finished code is checked for safety again.", size=16, color=WHITE, anchor="m")
 
 
 def s07_resources(prs, n):
     s = blank(prs)
-    header(s, "06 · Resources", "Free is automatic. Paid or login goes to a human.", n)
+    header(s, "6. Resources", "Free is automatic. Paid or login goes to a human.", n)
     lanes = [
         ("Fast lane", GREEN, GREEN_SOFT,
          "Free and needs no account: open-source libraries, public docs, free public "
-         "APIs without a key.",
+         "services that need no key.",
          "Uses it automatically and notes it in the thread."),
         ("Escalation lane", AMBER, AMBER_SOFT,
-         "Paid, behind a login, or needs an API key, a licence or a new account.",
+         "Paid, behind a login, or needs a key, a licence or a new account.",
          "Stops and asks the maintainers in chat: what it is, why, and the cost."),
     ]
     for (x, w), (t, c, soft, what, does) in zip(cols(2, 0.4), lanes):
@@ -210,14 +210,14 @@ def s07_resources(prs, n):
     rect(s, MARGIN, 5.55, CW, 1.05, fill=NAVY)
     text(s, MARGIN + 0.3, 5.55, CW - 0.6, 1.05,
          ["The bot never creates accounts, enters passwords or spends money. Keys go into "
-          "the server's secret file, never into chat.",
-          "The fast lane only skips resource approval — every release still needs a human yes."],
+          "a protected file on the server, never into chat.",
+          "The fast lane only skips this question. Every release still needs a person's yes."],
          size=15, color=WHITE, anchor="m")
 
 
 def s08_review(prs, n):
     s = blank(prs)
-    header(s, "07 · Review and approve", "Three checks before anything ships", n)
+    header(s, "7. Review and approve", "Three checks before anything ships", n)
     gates = [
         ("Opus code review", "Correctness, security, tests, readability. Problems "
          "go back to the builder, then Opus reviews again."),
@@ -247,7 +247,7 @@ def s08_review(prs, n):
 
 def s09_updates(prs, n):
     s = blank(prs)
-    header(s, "08 · Keeping people informed", "The poster and maintainer see every stage", n)
+    header(s, "8. Keeping people informed", "The poster and maintainer see every stage", n)
     stages = ["Received", "Safety check", "Researching", "Plan ready",
               "Waiting for approval", "Building", "Under review",
               "Published or stopped"]
@@ -264,8 +264,8 @@ def s09_updates(prs, n):
             if i < len(row) - 1:
                 arrow(s, x + 0.07, y + 0.16, 0.26, 0.28)
                 x += 0.36
-    text(s, MARGIN, 3.65, CW, 0.4, "“Waiting for approval” appears only when a paid "
-         "resource or login is needed. A “Testing” stage joins once builds run in a sandbox.", size=14, color=MUTED)
+    text(s, MARGIN, 3.65, CW, 0.4, "\"Waiting for approval\" appears only when a paid "
+         "resource or login is needed. A \"Testing\" stage joins once tests can run safely.", size=14, color=MUTED)
     step(3)
     pw = 2.93
     photo(s, "phone", W - MARGIN - pw, 4.3, pw, 1.95)
