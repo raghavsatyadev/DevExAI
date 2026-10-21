@@ -76,7 +76,9 @@ end;
 function InitializeSetup(): Boolean;
 begin
   Result := True;
-  if FileExists(ExpandConstant('{localappdata}\DevExAI\devexai.cmd')) then begin
+  // the Admin setup's own record, not just its files: a `devexai install` from a zip leaves those off PATH
+  if RegKeyExists(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A3F0B6D2-8E4C-4B19-A7C5-0D9E2B6F4A18}_is1')
+     and FileExists(ExpandConstant('{localappdata}\DevExAI\devexai.cmd')) then begin
     SuppressibleMsgBox('DevExAI Admin is installed for this user and already has the devexai commands '
       + '(devexai install <tool>, list, uninstall). Nothing to do.', mbInformation, MB_OK, IDOK);
     Result := False;
