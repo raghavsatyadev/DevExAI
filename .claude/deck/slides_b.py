@@ -30,32 +30,35 @@ def s10_outputs(prs, n):
 
 def s11_install(prs, n):
     s = blank(prs)
-    header(s, "10 · Installing", "Your project or your whole machine — your choice", n)
-    opts = [("This project only", "--project",
-             "The tool's files go into the project's .claude/, .gemini/ and .codex/ folders "
-             "and can be committed, so the whole team gets it.", "Team or project tools"),
-            ("My whole machine", "--global",
-             "The same files go into those folders in your home folder and work in every "
-             "project.",
-             "Personal productivity tools")]
-    for (x, w), (t, flag, b, good) in zip(cols(2, 0.4), opts):
-        step(1 if flag == "--project" else 2)
-        rect(s, x, 1.75, w, 3.6, fill=LIGHT)
-        text(s, x + 0.35, 1.95, w - 0.7, 0.5, t, size=22, bold=True, color=NAVY)
-        rect(s, x + 0.35, 2.6, w - 0.7, 0.6, fill=NAVY)
-        text(s, x + 0.55, 2.6, w - 1.1, 0.6, [[("python devex.py install <tool> " + flag, MONO)]],
-             size=14, anchor="m")
-        text(s, x + 0.35, 3.4, w - 0.7, 1.1, b, size=16, color=INK)
-        text(s, x + 0.35, 4.65, w - 0.7, 0.5,
-             [[("Good for: ", {"bold": True, "color": ACCENT}), good]], size=16,
-             color=INK)
-    step(3)
+    header(s, "10 · Installing", "Set up each computer once, then one command per tool", n)
+    c = {"font": "Courier New", "bold": True, "color": NAVY}
+    who = [("The admin, on the host", "DevExAI-Admin-Setup.exe",
+            [["No admin rights needed. ", ("devexai start admin", c), " starts the bot and "
+              "dashboard in the background and opens it; run again, it only opens the "
+              "dashboard."]]),
+           ("Each developer, once", "DevExAI-User-Setup.exe",
+            [["From the dashboard's /get page. Asks for the server, trusts the company CA, puts ",
+              ("devexai", c), " on PATH. No admin code inside."],
+             ["Linux: one curl | sh line from the same page."]]),
+           ("Each tool", "devexai install <tool>",
+            [["Copied from the blog post. Goes into this project's .claude/, .gemini/ and "
+              ".codex/ by default; ", ("--global", c), " for your whole machine."]])]
+    for i, ((x, w), (t, cmd, b)) in enumerate(zip(cols(3, 0.3), who)):
+        step(i + 1)
+        rect(s, x, 1.75, w, 3.15, fill=LIGHT)
+        text(s, x + 0.3, 1.95, w - 0.6, 0.45, t, size=20, bold=True, color=NAVY)
+        rect(s, x + 0.3, 2.55, w - 0.6, 0.55, fill=NAVY)
+        text(s, x + 0.45, 2.55, w - 0.9, 0.55, [[(cmd, MONO)]], size=14, anchor="m")
+        text(s, x + 0.3, 3.25, w - 0.6, 1.6, b, size=14, color=INK, spacing=6)
+    step(4)
     for (x, w), label in zip(cols(3, 0.3), ["Shows each change, asks first",
                                             "Never runs the tool's code",
                                             "Uninstall keeps your edits"]):
-        chip(s, x, 5.6, w, 0.65, label, fill=GREEN_SOFT, color=GREEN, size=16)
-    text(s, MARGIN, 6.4, CW, 0.45, "devex.py is one Python file from /blog/devex.py. It never edits settings files, "
-         "and never overwrites other files without --force.", size=14, color=MUTED)
+        chip(s, x, 5.2, w, 0.65, label, fill=GREEN_SOFT, color=GREEN, size=16)
+    text(s, MARGIN, 6.1, CW, 0.5, [[("Also: ", {"bold": True, "color": ACCENT}),
+         ("devexai list", c), ", ", ("devexai uninstall <tool>", c), ", ",
+         ("devexai update", c), ". Settings files are never edited; other files are never "
+         "overwritten without --force."]], size=14, color=MUTED)
 
 
 def s12_models(prs, n):
