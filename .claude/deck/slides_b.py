@@ -1,4 +1,4 @@
-"""Slides 10-19: outputs, install, models, product, cost, rules, rollout, risks, ask."""
+﻿"""Slides 10-19: outputs, install, models, product, cost, rules, rollout, risks, ask."""
 from helpers import (H, W, ACCENT, ACCENT_SOFT, AMBER, AMBER_SOFT, GREEN, GREEN_SOFT, INK,
                      LIGHT, MARGIN, MUTED, NAVY, RED, SKY, WHITE, blank, card, chip,
                      header, notes, photo, rect, shade, step, table, text)
@@ -154,15 +154,15 @@ def s15_rules(prs, n):
 
 def s16_rollout(prs, n):
     s = blank(prs)
-    header(s, "15 · Rollout", "Start small, then grow into a product", n)
-    phases = [("Pilot", "2–3 weeks", "Slack intake (our platform), safety gate, plan, human-built tool, "
-               "manual post. One team."),
-              ("Automate", "3–4 weeks", "Cheap builder, tests, Opus review, auto post, "
-               "install command, account pool."),
-              ("Company-wide", "Ongoing", "All teams, maintainer rotation, more AI "
+    header(s, "15 · Rollout", "The core is built; next, grow it into a product", n)
+    phases = [("Pilot", "Built", "Slack intake (our platform), safety gate, plan, "
+               "dashboard, blog post. One team."),
+              ("Automate", "Mostly built", "Built: builder, Opus review, auto post. "
+               "Next: tests in a sandbox, install command, account pool."),
+              ("Company-wide", "Next", "All teams, maintainer rotation, more AI "
                "assistants."),
-              ("Product", "After phase 3", "Second chat platform (e.g. Teams), settings "
-               "file, setup guide."),
+              ("Product", "Started", "Windows package and updater exist. Next: Linux, "
+               "second chat platform (e.g. Teams)."),
               ("Local models", "When needed", "GPU machine for cheap building and evals, "
                "if usage justifies it.")]
     for i, ((x, w), (t, when, b)) in enumerate(zip(cols(5, 0.2), phases)):
@@ -172,7 +172,8 @@ def s16_rollout(prs, n):
         text(s, x + 0.2, 1.95, w - 0.4, 0.35, f"Phase {i + 1}", size=14, bold=True,
              color=ACCENT)
         text(s, x + 0.2, 2.3, w - 0.4, 0.4, t, size=18, bold=True, color=NAVY)
-        text(s, x + 0.2, 2.75, w - 0.4, 0.35, when, size=14, bold=True, color=AMBER)
+        text(s, x + 0.2, 2.75, w - 0.4, 0.35, when, size=14, bold=True,
+             color=GREEN if when in ("Built", "Mostly built") else AMBER)
         text(s, x + 0.2, 3.15, w - 0.4, 1.7, b, size=14, color=MUTED)
     step(6)
     text(s, MARGIN, 5.2, CW, 0.4, "How we will know it works", size=18, bold=True,

@@ -4,7 +4,7 @@
 > researches it, builds a ready-to-install tool for the AI coding assistants the company uses, and
 > publishes a short post so everyone can use it. The person who had the idea gets the credit.
 
-Status: **Phase 1 pilot in progress** (see section 12).
+Status: **Phase 1 pilot built; Phase 2 mostly built** (see section 12).
 A first unsigned Windows build exists (`uv run --group build python tools/build.py`); the Linux build comes next.
 First slice of Phase 2: after approval the bot writes the tool's files and Opus reviews them
 (`[build] by = "bot"`); the files are saved, not run, until the sandbox exists.
@@ -235,12 +235,12 @@ the bot, a company Git repository for the tools, and a place to show the Markdow
 
 ## 12. Rollout
 
-| Phase | What | Time (rough) |
+| Phase | What | Status |
 |---|---|---|
-| 1. Pilot | Slack intake (our platform), safety gate, plan + human-built tool, blog post written as a Markdown file. One team. | 2–3 weeks |
-| 2. Automate building | Cheap-model builder, tests, Opus review, auto blog post, install command, account pool. | 3–4 weeks |
-| 3. Company-wide | All teams, multiple maintainers with rotation, more AI assistants supported. | ongoing |
-| 4. Product | Installable package for Windows and Linux with guided setup in the dashboard and a built-in updater; second chat platform (e.g. Microsoft Teams); self-hosted models (such as DeepSeek) as a setup option. | after phase 3 |
+| 1. Pilot | Slack intake (our platform), safety gate, plan + human-built tool, blog post written as a Markdown file. One team. | built |
+| 2. Automate building | Cheap-model builder, tests, Opus review, auto blog post, install command, account pool. | mostly built: builder, Opus review and blog post work; tests in a sandbox, install command and account pool come next |
+| 3. Company-wide | All teams, multiple maintainers with rotation, more AI assistants supported. | next |
+| 4. Product | Installable package for Windows and Linux with guided setup in the dashboard and a built-in updater; second chat platform (e.g. Microsoft Teams); self-hosted models (such as DeepSeek) as a setup option. | started: Windows package, dashboard setup and updater exist |
 | 5. Local models | Add the GPU machine for cheap building and evals, if usage justifies it. | when needed |
 
 **How we will know it works:** number of ideas submitted, % shipped, installs per tool, time from idea to
