@@ -44,11 +44,22 @@ def plain_text(text: str, bot_user: str | None = None) -> str:
     return html.unescape(text).strip()
 
 
+def _chunks(text: str, size: int = _SECTION) -> list[str]:
+    """Split at the last line break (else space) before the limit, so no word is cut in two."""
+    out = []
+    while len(text) > size:
+        cut = text.rfind("\n", 0, size)
+        cut = cut if cut > 0 else text.rfind(" ", 0, size)
+        cut = cut if cut > 0 else size
+        out.append(text[:cut])
+        text = text[cut:].lstrip("\n ")
+    return [*out, text] if text else out
+
+
 def blocks_for(text: str, buttons: tuple[Button, ...]) -> list[dict] | None:
     if not buttons:
         return None
-    sections = [{"type": "section", "text": {"type": "mrkdwn", "text": text[i:i + _SECTION]}}
-                for i in range(0, len(text), _SECTION)][:45] or []
+    sections = [{"type": "section", "text": {"type": "mrkdwn", "text": part}} for part in _chunks(text)][:45]
     actions = [{"type": "button", "action_id": f"devex-{n}", "value": b.command[:2000],
                 "text": {"type": "plain_text", "text": b.label[:75]},
                 **({"style": "danger"} if b.label.lower().startswith(("deny", "reject", "stop")) else {})}

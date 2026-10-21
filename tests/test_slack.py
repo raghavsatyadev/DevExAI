@@ -61,6 +61,9 @@ def test_blocks_only_with_buttons_and_deny_is_red():
     assert [b["type"] for b in blocks] == ["section", "section", "section", "actions"]
     approve, deny = blocks[-1]["elements"]
     assert approve["value"] == "/devex-approve 1" and "style" not in approve and deny["style"] == "danger"
+    words = " ".join(["word"] * 1500)  # 7499 chars: sections must break between words
+    parts = [b["text"]["text"] for b in blocks_for(words, (Button("Ok", "/devex-status 1"),))[:-1]]
+    assert all(len(p) <= 2900 for p in parts) and " ".join(parts) == words
 
 
 def test_names_follow_people_emails_and_never_borrow_a_maintainer_name():
