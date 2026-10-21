@@ -139,11 +139,13 @@ def get_page(origin: str, web: WebSettings) -> str:
            f'then run it with Python wherever a post says <code>devexai</code>:</p>'
            f'{blog.code_block(f"python3 devexai.pyz connect {origin}", ids)}'
            f'{blog.code_block("python3 devexai.pyz install <tool>", ids)}')
-    body = (f'<div class="card"><h1>Get DevExAI for developers</h1><p>Once per computer. Afterwards every '
-            f'tool on the blog installs with the command shown on its post, like '
-            f'<code>devexai install &lt;tool&gt;</code>. Open a new terminal after installing.</p>'
-            f'<h2>Windows</h2>{win}<h2>Linux</h2>{nix or "<p class=muted>Use devexai.pyz below.</p>"}'
-            f'<h2>macOS, or any computer with Python</h2>{pyz}{fp}</div>')
+    lede = ('<p class="lede">Once per computer. Afterwards every tool on the blog installs with the command '
+            'shown on its post, like <code>devexai install &lt;tool&gt;</code>. Open a new terminal after '
+            'installing.</p>')
+    body = (blog.hero("For developers", "Get DevExAI", lede)
+            + f'<div class="layout single"><div><div class="panel"><h2>Windows</h2>{win}</div>'
+            f'<div class="panel"><h2>Linux</h2>{nix or "<p class=muted>Use devexai.pyz below.</p>"}</div>'
+            f'<div class="panel"><h2>macOS, or any computer with Python</h2>{pyz}{fp}</div></div></div>')
     return blog._page("Get DevExAI", body)
 
 

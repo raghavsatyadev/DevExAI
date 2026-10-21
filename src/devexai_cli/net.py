@@ -115,7 +115,7 @@ def tools(server: str, home: Path) -> list[dict]:
 
 def find(listed: list[dict], wanted: str) -> dict:
     wanted = wanted.strip().lower().lstrip("#")
-    hits = [t for t in listed if wanted in (t["name"], t["post"].removesuffix(".md"), str(t.get("id")))]
+    hits = [t for t in listed if wanted in (t["name"], t["post"].rsplit(".", 1)[0], str(t.get("id")))]
     if len(hits) == 1:
         return hits[0]
     if not hits:

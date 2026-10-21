@@ -59,7 +59,7 @@ class WebSettings:
 
 @dataclass(frozen=True)
 class BlogSettings:
-    dir: Path = Path("data/blog")   # published posts are Markdown files here
+    dir: Path = Path("data/blog")   # published posts are HTML files here
     base_url: str = ""              # if set, chat links are base_url + file name
 
     def link(self, name: str) -> str:

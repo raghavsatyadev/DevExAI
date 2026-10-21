@@ -70,7 +70,7 @@ def test_tool_commands_go_to_the_developer_command(argv, tool):
 
 def test_get_page_and_version(web):
     resp, data = raw(web, "GET", "/get")
-    assert resp.status == 200 and b"devexai.pyz" in data and b"Get DevExAI for developers" in data
+    assert resp.status == 200 and b"devexai.pyz" in data and b"<h1>Get DevExAI</h1>" in data
     resp, data = raw(web, "GET", "/get/version.json")
     assert resp.status == 200 and json.loads(data)["version"] == devexai.__version__
     assert raw(web, "GET", "/get/ca.pem")[0].status == 404  # no TLS, no authority to hand out

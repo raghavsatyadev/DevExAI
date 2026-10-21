@@ -54,8 +54,8 @@ def test_approval_builds_reviews_and_publishes(make_bot, tmp_path):
     say(bot, "alice", f"/devex-publish {idea.id}")
     idea = only_idea(bot)
     assert idea.stage is Stage.PUBLISHED
-    text = next((tmp_path / "blog").glob("*.md")).read_text(encoding="utf-8")
-    assert "## Files" in text and "- SKILL.md" in text and "copy SKILL.md" in text
+    text = next((tmp_path / "blog").glob("*.html")).read_text(encoding="utf-8")
+    assert '<section class="files">' in text and "<li>SKILL.md</li>" in text and "copy SKILL.md" in text
 
 
 def test_untrusted_text_stays_out_of_system_prompts(make_bot):
@@ -154,7 +154,7 @@ def test_page_shows_files_escaped(make_bot):
 def test_post_lists_files(make_bot):
     bot = make_bot(builder={**BUILT, "files": [{"path": "a_b-c.md", "content": ""}]})
     idea = approved(bot)
-    assert "- a\\_b-c.md" in post.render(idea, maintainer="alice")
+    assert "<li>a_b-c.md</li>" in post.render(idea, maintainer="alice")
 
 
 @pytest.mark.parametrize("path", ["../x", "/abs", "C:/x", "a/../b", "CON", "nul.txt", "a\\..\\b", "x.", "", "a//b"])

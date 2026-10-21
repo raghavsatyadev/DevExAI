@@ -51,10 +51,10 @@ def publish(server):
 
 def test_published_post_is_public_and_escaped(web):
     idea = publish(web)
-    name = next(web.bot.settings.blog.dir.glob("*.md")).name
+    name = next(web.bot.settings.blog.dir.glob("*.html")).name
     client = Client(web)  # not signed in
     resp, index = client.request("GET", "/blog")
-    assert resp.status == 200 and f'href="/blog/{name}"' in index and "Lint  b skill /b" in index
+    assert resp.status == 200 and f'href="/blog/{name}"' in index and "Lint &lt;b&gt;skill&lt;/b&gt;" in index
     resp, page = client.request("GET", f"/blog/{name}")
     assert resp.status == 200 and "<h1>Lint &lt;b&gt;skill&lt;/b&gt;</h1>" in page
     assert page.count("<script>") == 1 and "<li>SKILL.md</li>" in page
@@ -65,7 +65,7 @@ def test_published_post_is_public_and_escaped(web):
 def test_bad_names_are_not_found(web, tmp_path):
     (tmp_path / "secret.md").write_text("x", encoding="utf-8")
     client = Client(web)
-    for path in ("/blog/../secret.md", "/blog/secret.md", "/blog/0001-x.txt", "/blog/0001-missing.md",
+    for path in ("/blog/../secret.md", "/blog/secret.md", "/blog/0001-x.txt", "/blog/0001-missing.html",
                  "/blog/%2e%2e%2fsecret.md"):
         assert client.request("GET", path)[0].status == 404
 
@@ -89,7 +89,7 @@ def test_front_matter():
 
 def test_published_tool_files_can_be_copied_and_downloaded(web):
     publish(web)
-    name = next(web.bot.settings.blog.dir.glob("*.md")).name
+    name = next(web.bot.settings.blog.dir.glob("*.html")).name
     resp, page = Client(web).request("GET", f"/blog/{name}")
     script = re.search(r"<script>(.*?)</script>", page, re.DOTALL).group(1)
     digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
@@ -131,3 +131,35 @@ def test_files_only_for_published_ideas(web):
 def test_dashboard_pages_allow_no_scripts(web):
     resp, _ = Client(web).request("GET", "/login")
     assert "script-src" not in resp.getheader("Content-Security-Policy")
+
+
+def test_hand_edited_post_is_cleaned(web):
+    folder = web.bot.settings.blog.dir
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "0042-x.html").write_text(
+        '<!-- devexai-post {"title": "X"} --><article><h1 onclick="a()">X</h1><meta http-equiv="refresh" '
+        'content="0;url=https://evil.example"><form action="https://evil.example"><input name=p></form>'
+        '<script>alert(1)</script><style>body{display:none}</style><p style="x">ok <a href="javascript:a">j</a> '
+        '<a href="https://example.com/a">w</a></p></article>', encoding="utf-8")
+    page = Client(web).request("GET", "/blog/0042-x.html")[1]
+    for bad in ("refresh", "<form", "<input", "alert(1)", "body{display:none}", "onclick", "javascript:", 'style="x"'):
+        assert bad not in page
+    assert "<a>j</a>" in page and '<a href="https://example.com/a">w</a>' in page and "<h1>X</h1>" in page
+
+
+def test_old_markdown_post_becomes_html_and_old_links_redirect(web):
+    idea = publish(web)
+    folder, new = web.bot.settings.blog.dir, post.filename(idea)
+    old = new[:-5] + ".md"
+    (folder / new).replace(folder / old.replace(".md", ".gone"))
+    (folder / old).write_text('---\ntitle: "T"\ndate: 2026-10-01\nmaintainer: "bob"\n---\n# T\n\n'
+                              '## Install\n\nRun \\`x\\`.\n', encoding="utf-8")
+    web.bot.store.ideas.update(idea.id, blog_url=f"http://h/blog/{old}")
+    assert post.migrate(folder, web.bot.store) == [new]
+    assert (folder / (old + ".old")).exists() and not (folder / old).exists()
+    text = (folder / new).read_text(encoding="utf-8")
+    assert r"2026\u002d10\u002d01" in text and "@bob" in text and "Run `x`." in text
+    assert web.bot.store.ideas.get(idea.id).blog_url == f"http://h/blog/{new}"
+    assert post.migrate(folder, web.bot.store) == []
+    resp, _ = raw(web, "GET", f"/blog/{old}/files.zip")
+    assert resp.status == 303 and resp.getheader("Location") == f"/blog/{new}/files.zip"

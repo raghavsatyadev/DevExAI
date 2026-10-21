@@ -128,6 +128,13 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
 
     store = Store(settings.db_path)
     store.people.seed(settings.maintainers)
+    from .flow.post import migrate
+
+    try:
+        for name in migrate(settings.blog.dir, store):
+            logging.info("blog post %s is now HTML", name)
+    except OSError:
+        logging.exception("old blog posts not converted to HTML")
     settings = with_overrides(settings, store.meta)
     if tray and (adapter or settings.chat_adapter) == "console":
         adapter = "none"  # nobody can type into a console that is not there

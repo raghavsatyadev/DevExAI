@@ -77,6 +77,8 @@ def blog_get(h: _Handler, path: str, base_csp: str) -> None:
         return h._redirect("/get")
     m = _ROUTE.fullmatch(path)
     name = m.group(1) if m else ""
+    if blog.OLD_NAME.fullmatch(name):  # links in chat from before posts were HTML
+        return h._redirect(f"/blog/{name[:-3]}.html" + path[len("/blog/") + len(name):])
     if m and not m.group(2):
         page = blog.post_page(folder, name, published_files(h, name), h.server.base_url)
         if page:

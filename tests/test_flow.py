@@ -60,10 +60,10 @@ def test_happy_path_to_published(make_bot):
     say(bot, "alice", f"/devex-built {idea.id} done")
     say(bot, "alice", f"/devex-publish {idea.id} run devex install lint")
     idea = only_idea(bot)
-    name = f"{idea.id:04d}-lint-skill.md"
+    name = f"{idea.id:04d}-lint-skill.html"
     assert idea.stage is Stage.PUBLISHED and idea.blog_url == f"https://blog.example/posts/{name}"
     text = (bot.settings.blog.dir / name).read_text(encoding="utf-8")
-    assert "**Idea by @carol.**" in text and "A ktlint skill." in text and "run devex install lint" in text
+    assert "Idea by <strong>@carol</strong>" in text and "A ktlint skill." in text and "run devex install lint" in text
     assert any(idea.blog_url in t and "New tool" in t for t in bot.chat.texts())
     public = [p for p in bot.chat.posts if p.channel == "#ai-tools"]
     assert public and "Idea by @carol" in public[0].text
