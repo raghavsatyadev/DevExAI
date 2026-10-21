@@ -1,4 +1,4 @@
-﻿"""Slides 10-19: outputs, install, models, product, cost, rules, rollout, risks, ask."""
+"""Slides 10-19: outputs, install, models, product, cost, rules, rollout, risks, ask."""
 from helpers import (H, W, ACCENT, ACCENT_SOFT, AMBER, AMBER_SOFT, GREEN, GREEN_SOFT, INK,
                      LIGHT, MARGIN, MUTED, NAVY, RED, SKY, WHITE, blank, card, chip,
                      header, notes, photo, rect, shade, step, table, text)
@@ -19,13 +19,13 @@ def s10_outputs(prs, n):
         step(i + 1)
         card(s, x, 1.75, w, 2.3, t, b, title_size=20)
     step(5)
-    text(s, MARGIN, 4.4, CW, 0.4, "Three assistants supported at launch — more later",
+    text(s, MARGIN, 4.4, CW, 0.4, "Claude Code first; Gemini CLI and Codex next",
          size=18, bold=True, color=NAVY)
     for (x, w), label in zip(cols(3, 0.3), ["Claude · Claude Code", "Gemini · Gemini CLI",
                                             "ChatGPT · Codex"]):
         chip(s, x, 4.95, w, 0.7, label, size=18)
-    text(s, MARGIN, 5.9, CW, 0.5, "One shared core with a thin adapter per assistant, so "
-         "an idea is never rebuilt three times.", size=16, color=MUTED)
+    text(s, MARGIN, 5.9, CW, 0.5, "The builder writes Claude Code files today. Later: one shared core with a thin adapter "
+         "per assistant, so an idea is never rebuilt three times.", size=16, color=MUTED)
 
 
 def s11_install(prs, n):
@@ -56,16 +56,16 @@ def s11_install(prs, n):
 
 def s12_models(prs, n):
     s = blank(prs)
-    header(s, "11 · Which AI does what", "Strong models think, cheaper models type", n)
+    header(s, "11 · Which AI does what", "Opus thinks and reviews; cheaper models will type", n)
     rows = [["Job", "Model", "Why"],
-            ["Safety gate", "Claude + standard malware and secret scanners",
+            ["Safety gate", "Claude Opus; malware and secret scanners to add",
              "Safety mistakes are expensive."],
             ["Research & planning", "Claude Opus", "Best reasoning; thinking, not bulk typing."],
-            ["Writing code", "Gemini Flash (default); DeepSeek or local model optional",
+            ["Writing code", "Claude Opus today; Gemini Flash or a local model planned",
              "Cheap and fast at following a clear plan."],
             ["Code review", ("Claude Opus only", {"bold": True, "color": ACCENT}),
              "A cheaper model never reviews code or its own work."],
-            ["Blog post", "Cheap model, checked by Opus", "Short text, low risk."],
+            ["Blog post", "Written from the approved plan", "No extra model needed."],
             ["Experiments / evals", "Local models on an optional 24 GB GPU",
              "Free to run once the GPU is bought."]]
     table(s, MARGIN, 1.75, [2.7, 4.85, 4.58], rows, size=15, head_size=15, row_h=0.62)
@@ -77,14 +77,15 @@ def s13_product(prs, n):
     text(s, MARGIN, 1.45, CW, 0.4, "Each company picks its own parts in one settings file. "
          "The core flow stays the same.", size=16, color=MUTED)
     step(1)
-    parts = [("Chat platform", "Any with bots: Slack, Teams, Google Chat, Discord, "
-              "Mattermost, and more"),
-             ("AI accounts", "Claude, Gemini, ChatGPT — subscriptions and/or API keys"),
-             ("Code host", "GitHub, GitLab, Bitbucket, Azure DevOps, self-hosted Git"),
-             ("Secret store", "HashiCorp Vault, or AWS / Google Cloud / Azure"),
-             ("Blog / website", "The company's own site, wiki, or any site the bot can "
-              "publish to"),
-             ("Where it runs", "Cloud VM, own servers, or Docker / Kubernetes")]
+    parts = [("Chat platform", "Slack today; Teams, Google Chat, Discord and more "
+              "through a small adapter"),
+             ("AI accounts", "Claude today; Gemini and ChatGPT next — subscriptions or API keys"),
+             ("Code host", "GitHub, GitLab, Bitbucket, Azure DevOps, self-hosted Git (later)"),
+             ("Secret store", "A secret file on the server today; Vault or a cloud secret manager"),
+             ("Blog / website", "Built into the dashboard; posts are Markdown files any site "
+              "can show"),
+             ("Where it runs", "The company's own server, from a Windows or Linux package that "
+              "updates itself")]
     for i, (t, b) in enumerate(parts):
         x = MARGIN + (i % 2) * 3.65
         y = 2.05 + (i // 2) * 1.55
@@ -95,7 +96,7 @@ def s13_product(prs, n):
     x0 = MARGIN + 7.45
     w0 = CW - 7.45
     rect(s, x0, 2.05, w0, 4.5, fill=ACCENT_SOFT)
-    text(s, x0 + 0.3, 2.2, w0 - 0.6, 0.45, "Account pool", size=20, bold=True, color=ACCENT)
+    text(s, x0 + 0.3, 2.2, w0 - 0.6, 0.45, "Account pool (planned)", size=20, bold=True, color=ACCENT)
     text(s, x0 + 0.3, 2.75, w0 - 0.6, 3.7,
          ["• Several subscriptions and API keys per provider",
           "• One hits its limit → the next takes over",
@@ -115,12 +116,12 @@ def s14_cost(prs, n):
           "code under company terms", "Opus planning and review use the most quota",
           "Add accounts or keys to the pool when busy"]),
         ("Optional extras", AMBER,
-         ["DeepSeek for cheap extra building — off by default (open question 1)",
+         ["DeepSeek for cheap extra building — off for now",
           "One machine with a 24 GB GPU for local models and testing"]),
         ("Also needed", GREEN,
-         ["A bot app on the chat platform (usually free)", "A small always-on server or "
-          "cloud VM", "A company Git repository for the tools", "A blog website — "
-          "custom-built, details later"]),
+         ["A bot app on the chat platform (usually free)", "A small always-on server on the "
+          "company network", "A company Git repository for the tools", "The blog, already built into "
+          "the dashboard"]),
     ]
     for i, ((x, w), (t, c, items)) in enumerate(zip(cols(3), groups)):
         step(i + 1)
@@ -189,9 +190,9 @@ def s17_risks(prs, n):
     header(s, "16 · Risks", "What could go wrong, and how we handle it", n)
     rows = [["Risk", "Handling"],
             ["Harmful or buggy tool on many laptops", "Two safety checks, human approval, "
-             "sandboxed builds, versions, one-command uninstall, pull a release."],
-            ["Hidden instructions in a link", "Links read in a sandbox as plain data; no "
-             "secrets while reading."],
+             "sandboxed builds (next), versions, one-command uninstall, pull a release."],
+            ["Hidden instructions in a link", "Links read by a separate process as plain "
+             "data; no secrets while reading."],
             ["Company code leaks to an outside AI", "Only approved providers see code; "
              "summaries instead of full source where possible."],
             ["Costs grow quietly", "Budgets per provider and account, usage shown to "
@@ -207,20 +208,19 @@ def s17_risks(prs, n):
 
 def s18_questions(prs, n):
     s = blank(prs)
-    header(s, "17 · Open questions", "What we need to decide", n)
-    qs = [("DeepSeek (optional)", "Use it only for work with no company code, or run its "
-           "open models on our own GPU? The plan works without it.", None),
-          ("Blog website", "Our own custom-built site. Design, hosting and how the bot "
-           "publishes are decided later.", None),
-          ("First maintainers", "Who they are, and what response time we promise.",
-           "Parked"),
-          ("Offering the product", "Other companies host it themselves, we host it for "
-           "them, or both?", None)]
+    header(s, "17 · Decisions", "What we have decided so far", n)
+    qs = [("DeepSeek", "Off for now. Self-hosted models may become a setup option.", None),
+          ("Blog", "Posts are Markdown files, served by the dashboard's own blog page.",
+           None),
+          ("Maintainers", "Raghav is the pilot's admin and first maintainer. Maintainers "
+           "answer within 24 hours.", None),
+          ("Offering the product", "Each company hosts it on its own network, from a "
+           "Windows or Linux package that updates itself.", None)]
     for i, (t, b, tag) in enumerate(qs):
         step(i + 1)
         x, w = cols(2, 0.4)[i % 2]
         y = 1.75 + (i // 2) * 2.45
-        card(s, x, y, w, 2.25, t, b, badge=f"Q{i + 1}", title_size=19, body_size=16,
+        card(s, x, y, w, 2.25, t, b, badge=f"D{i + 1}", title_size=19, body_size=16,
              accent=MUTED if tag else ACCENT)
         if tag:
             chip(s, x + w - 1.4, y + 0.25, 1.15, 0.45, tag, fill=AMBER_SOFT, color=AMBER,
@@ -236,8 +236,8 @@ def s19_close(prs):
     text(s, MARGIN, 1.6, 10, 0.4, "NEXT STEPS", size=14, bold=True, color=SKY)
     text(s, MARGIN, 2.1, 12, 0.9, "Turn good ideas into tools everyone uses", size=40,
          bold=True, color=WHITE)
-    steps = ["Review this proposal", "Answer the open questions",
-             "Start the pilot with one team"]
+    steps = ["Review this proposal", "Pick the pilot team",
+             "Run the pilot with that team"]
     for i, ((x, w), st) in enumerate(zip(cols(3, 0.3), steps)):
         step(i + 2)
         rect(s, x, 3.6, w, 1.5, fill=ACCENT)

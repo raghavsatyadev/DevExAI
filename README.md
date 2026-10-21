@@ -184,11 +184,11 @@ exactly that and keeps any file edited since.
 
 | Job | Model | Why |
 |---|---|---|
-| Safety gate | A strong model (Claude) + standard malware/secret scanners | Safety mistakes are expensive. |
+| Safety gate | A strong model (Claude Opus today) + standard malware/secret scanners (to add) | Safety mistakes are expensive. |
 | Research and planning | Claude Opus | Best reasoning; used only for thinking, not bulk typing. |
-| Writing code | Gemini Flash (default); a local model optional (DeepSeek off for now) | Cheap and fast for following a clear plan. |
+| Writing code | Claude Opus today (`[llm.models] builder`); Gemini Flash or a local model planned (DeepSeek off for now) | Cheap and fast for following a clear plan. |
 | Code review | **Claude Opus only** | Catches mistakes the builder made. A cheaper model never reviews code, and never reviews its own work. |
-| Blog post | Cheap model, checked by Opus | Short text, low risk. |
+| Blog post | Written from the approved plan; no extra model | Short text, low risk. |
 | Experiments / evals | Local models on a 24 GB GPU | Free to run once the GPU is bought. |
 
 ## 9. Built as a product: fits any company's setup

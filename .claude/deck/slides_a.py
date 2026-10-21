@@ -74,7 +74,7 @@ def s03_idea(prs, n):
         ("Idea", "Any colleague posts text or links in chat."),
         ("Safety gate", "Strict check before any work starts."),
         ("Plan", "Claude Opus researches with our project context."),
-        ("Build", "A cheaper model writes code and tests."),
+        ("Build", "The builder AI writes the code, tests and README."),
         ("Review", "Opus reviews every line; a human approves."),
         ("Publish", "Short post with install steps; idea credited."),
     ]
@@ -92,7 +92,7 @@ def s03_idea(prs, n):
             arrow(s, x + bw + 0.08, 3.0, 0.32, 0.32)
     step(7)
     for (x, w), label in zip(cols(3, 0.25),
-                             ["Opus plans · cheaper models build",
+                             ["Opus plans and reviews",
                               "No release without a human yes",
                               "The poster is named in the post"]):
         chip(s, x, 5.1, w, 0.65, label, size=16)
@@ -103,8 +103,8 @@ def s04_people(prs, n):
     header(s, "03 · Who is involved", "Four roles, one thread per idea", n)
     roles = [
         ("Poster", "Any colleague. Sends an idea — text, links, or both — to the bot."),
-        ("Maintainers", "A small group. Approve paid resources and releases, decide unsure "
-         "cases, own the project summaries."),
+        ("Maintainers", "A small group. Approve plans, paid resources and releases, decide "
+         "unsure cases, own the project summaries. Admins add them in the dashboard."),
         ("The bot", "Safety check, research, planning, building, testing, publishing "
          "and every update."),
         ("Readers", "Everyone. Read the post and install the tool for a project or "
@@ -117,7 +117,7 @@ def s04_people(prs, n):
     text(s, MARGIN, 4.6, CW, 0.4, "Picking a maintainer for each idea", size=18, bold=True,
          color=NAVY)
     flow = ["Topic match (e.g. Android, backend, security)", "Otherwise round-robin",
-            "No reply in time (e.g. one working day) → next maintainer, everyone told"]
+            "No reply within 24 hours → next maintainer, everyone told"]
     widths = [3.6, 2.6, 5.0]
     x = MARGIN
     for i, (label, w) in enumerate(zip(flow, widths)):
@@ -134,11 +134,11 @@ def s05_steps(prs, n):
     steps = [
         ("Submit", "Text and/or links to the bot. Gets a tracking number and a thread."),
         ("Safety gate", "Nothing starts until the idea and every link pass."),
-        ("Research", "Reads links, checks for duplicates, uses project summaries."),
+        ("Research", "Reads links, flags duplicates, uses project summaries."),
         ("Plan", "Claude Opus posts a plain-language plan in the thread."),
         ("Resources", "Free is automatic. Paid or login goes to a maintainer."),
-        ("Build & test", "Cheaper model, in a sandbox, with tests and a README."),
-        ("Review", "Opus review, safety check again, human final yes."),
+        ("Build & test", "Builder writes code, tests and a README. Running tests in a sandbox is next."),
+        ("Review", "Opus review with a safety check, one fix round, human final yes."),
         ("Publish", "Versioned release, short blog post, poster credited."),
     ]
     grid = cols(4, 0.25)
@@ -178,8 +178,8 @@ def s06_safety(prs, n):
     step(3)
     rect(s, MARGIN, 5.85, CW, 0.75, fill=NAVY)
     text(s, MARGIN + 0.3, 5.85, CW - 0.6, 0.75,
-         "Links open in an isolated sandbox, never on a laptop. The same check runs again "
-         "on the finished code.", size=16, color=WHITE, anchor="m")
+         "Links are read by a separate process with no secrets, never on a laptop. The "
+         "review checks the finished code for safety again.", size=16, color=WHITE, anchor="m")
 
 
 def s07_resources(prs, n):
@@ -210,7 +210,7 @@ def s07_resources(prs, n):
     rect(s, MARGIN, 5.55, CW, 1.05, fill=NAVY)
     text(s, MARGIN + 0.3, 5.55, CW - 0.6, 1.05,
          ["The bot never creates accounts, enters passwords or spends money. Keys go into "
-          "a secret store, never into chat.",
+          "the server's secret file, never into chat.",
           "The fast lane only skips resource approval — every release still needs a human yes."],
          size=15, color=WHITE, anchor="m")
 
@@ -241,7 +241,7 @@ def s08_review(prs, n):
     rect(s, MARGIN, 4.95, CW - pw - 0.3, 1.8, fill=ACCENT_SOFT)
     text(s, MARGIN + 0.4, 4.95, CW - pw - 1.1, 1.8,
          [[("Only Opus reviews code. ", {"bold": True, "color": ACCENT}),
-           "The cheaper builder never approves code, and never reviews its own work."]],
+           "The builder never approves code, and never reviews its own work."]],
          size=18, color=NAVY, anchor="m")
 
 
@@ -249,7 +249,7 @@ def s09_updates(prs, n):
     s = blank(prs)
     header(s, "08 · Keeping people informed", "The poster and maintainer see every stage", n)
     stages = ["Received", "Safety check", "Researching", "Plan ready",
-              "Waiting for approval", "Building", "Testing", "Under review",
+              "Waiting for approval", "Building", "Under review",
               "Published or stopped"]
     rows = [stages[:5], stages[5:]]
     for r, row in enumerate(rows):
@@ -265,14 +265,14 @@ def s09_updates(prs, n):
                 arrow(s, x + 0.07, y + 0.16, 0.26, 0.28)
                 x += 0.36
     text(s, MARGIN, 3.65, CW, 0.4, "“Waiting for approval” appears only when a paid "
-         "resource or login is needed.", size=14, color=MUTED)
+         "resource or login is needed. A “Testing” stage joins once builds run in a sandbox.", size=14, color=MUTED)
     step(3)
     pw = 2.93
     photo(s, "phone", W - MARGIN - pw, 4.3, pw, 1.95)
     notes(s, "Photo: freestocks on Unsplash (Unsplash License), unsplash.com/photos/mw6Onwg4frY")
     for (x, w), (t, b) in zip(cols(2, 0.3, CW - pw - 0.3), [
-            ("Where", "Everything goes into the idea's own thread, so anyone can see what "
-             "happened and why."),
+            ("Where", "Every update goes into the idea's own thread; the maintainer's buttons "
+             "come in a direct message."),
             ("What they can do", "Reply to ask a question, add details, or stop the idea. "
              "If a step runs long, the bot says so.")]):
         card(s, x, 4.3, w, 1.95, t, b, title_size=19, body_size=15)
