@@ -57,7 +57,7 @@ def test_published_post_is_public_and_escaped(web):
     assert resp.status == 200 and f'href="/blog/{name}"' in index and "Lint  b skill /b" in index
     resp, page = client.request("GET", f"/blog/{name}")
     assert resp.status == 200 and "<h1>Lint &lt;b&gt;skill&lt;/b&gt;</h1>" in page
-    assert "<script>x" not in page and "<li>SKILL.md</li>" in page
+    assert page.count("<script>") == 1 and "<li>SKILL.md</li>" in page
     assert "run <strong>it</strong>" not in page and "run **it**" in page  # the install note stays plain text
     assert idea.id
 
@@ -98,7 +98,7 @@ def test_published_tool_files_can_be_copied_and_downloaded(web):
     assert "print('&lt;script&gt;&amp;amp;')" in page
     assert '<code data-copy="" title="Click to copy">python a.py --x &lt;y&gt;</code>' in page
     assert "pip install x &amp;&amp; echo '&lt;b&gt;'</pre>" in page and "<ol>" in page
-    assert f"curl.exe -fLo lint-b-skill-b.zip http://127.0.0.1:{web.server_address[1]}/blog/{name}/files.zip" in page
+    assert f"curl.exe --ssl-no-revoke -fLo lint-b-skill-b.zip http://127.0.0.1:{web.server_address[1]}/blog/{name}/files.zip" in page
 
     resp, data = raw(web, "GET", f"/blog/{name}/files.zip")
     assert resp.status == 200 and resp.getheader("Content-Type") == "application/zip"

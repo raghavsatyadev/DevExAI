@@ -213,7 +213,10 @@ def tool_slug(name: str) -> str:
 def _tool_cards(name: str, files: dict[str, str], origin: str, ids: Iterator[int]) -> str:
     slug, base = tool_slug(name), f"/blog/{name}"
     zip_url = f"{origin}{base}/files.zip"
-    win = f"curl.exe -fLo {slug}.zip {zip_url}; mkdir {slug}; tar -xf {slug}.zip -C {slug}; del {slug}.zip"
+    # --ssl-no-revoke: Windows curl also asks the CA for revocation lists, which a company's own CA often
+    # does not publish; the certificate itself is still checked.
+    win = (f"curl.exe --ssl-no-revoke -fLo {slug}.zip {zip_url}; "
+           f"if ($?) {{ mkdir {slug} -Force > $null; tar -xf {slug}.zip -C {slug}; del {slug}.zip }}")
     nix = f"curl -fLo {slug}.zip {zip_url} && unzip -d {slug} {slug}.zip && rm {slug}.zip"
     get = (f'<div class="card" id="get"><h2>Get it</h2>'
            f'<div class="row"><a class="btn" href="{base}/files.zip" download>Download all files (.zip)</a></div>'
