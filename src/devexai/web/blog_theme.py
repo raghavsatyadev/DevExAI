@@ -50,6 +50,11 @@ clip-path:var(--cookie)}
 .post li,.panel li{margin:4px 0;padding-left:4px}
 .post li::marker,.panel li::marker{color:var(--primary);font-weight:700}
 .files-list li{font-family:var(--mono);font-size:14px}
+ol.steps{list-style:none;counter-reset:step;padding:0;margin:8px 0 12px}
+ol.steps>li{counter-increment:step;position:relative;padding:0 0 18px 48px;margin:0}
+ol.steps>li::before{content:counter(step);position:absolute;left:0;top:-2px;width:32px;height:32px;border-radius:50%;
+display:grid;place-items:center;background:var(--primary);color:var(--on-primary);font:700 15px/1 var(--font)}
+ol.steps .row{margin:10px 0 0}
 .note{border-left:4px solid var(--tertiary);padding:2px 0 2px 14px;margin:12px 0}
 .code{position:relative}.code pre{padding-right:96px}
 .code button.copy{position:absolute;top:6px;right:6px;min-height:32px;padding:4px 14px}

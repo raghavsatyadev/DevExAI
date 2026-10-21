@@ -125,20 +125,15 @@ def _section(html: str, cls: str) -> tuple[str, str]:
     return re.sub(r"^\s*<h2>.*?</h2>", "", m.group(1), flags=re.S), html[:m.start()] + html[m.end():]
 
 
-def _install_panel(slug: str, base: str, origin: str, note: str, ids: Iterator[int]) -> str:
+def _install_panel(slug: str, origin: str, note: str, ids: Iterator[int]) -> str:
     note = f'<h3>Notes from the maintainer</h3><div class="note">{note}</div>' if note.strip() else ""
-    return (f'<div class="panel lift" id="install"><h2>Install it</h2>'
-            f'<p><b>This project only</b>: run it in the project folder. The files can be committed so the '
-            f'whole team gets them.</p>{code_block(f"devexai install {slug}", ids)}'
-            f'<p><b>My whole machine</b>: the files go into your home folder and work in every project.</p>'
-            f'{code_block(f"devexai install {slug} --global", ids)}'
-            f'<p>It shows every change and asks first. To remove it: <code data-copy="" title="Click to copy">'
-            f'devexai uninstall {slug}</code> (add <code>--global</code> if you installed it that way).</p>{note}'
-            f'<p class="muted">First time on this computer? <a href="{origin}/get">Get DevExAI for '
-            f'developers</a>, once.</p></div>'
-            f'<div class="panel"><h2>Just the files</h2><a class="btn big" href="{base}/files.zip" download>'
-            f'Download all files (.zip)</a><p class="muted">Or unpack them with one command: '
-            f'<a href="#get">see below</a>.</p></div>')
+    return (f'<div class="panel lift" id="install"><h2>Install it</h2><ol class="steps">'
+            f'<li><b>Once per computer</b>, get the DevExAI command. Skip this if you have installed a '
+            f'tool from this blog before.<div class="row"><a class="btn tonal" href="{origin}/get">Get DevExAI'
+            f'</a></div></li><li><b>In your project folder</b>, run:{code_block(f"devexai install {slug}", ids)}'
+            f'</li></ol><p class="muted">It shows what it will add and asks first. Want it in every project? '
+            f'Add <code data-copy="" title="Click to copy">--global</code>. To remove it: <code data-copy="" '
+            f'title="Click to copy">devexai uninstall {slug}</code></p>{note}</div>')
 
 
 def _files_panels(slug: str, base: str, zip_url: str, files: dict[str, str], ids: Iterator[int]) -> str:
@@ -147,14 +142,6 @@ def _files_panels(slug: str, base: str, zip_url: str, files: dict[str, str], ids
     win = (f"curl.exe --ssl-no-revoke -fLo {slug}.zip {zip_url}; "
            f"if ($?) {{ mkdir {slug} -Force > $null; tar -xf {slug}.zip -C {slug}; del {slug}.zip }}")
     nix = f"curl -fLo {slug}.zip {zip_url} && unzip -d {slug} {slug}.zip && rm {slug}.zip"
-    out = ""
-    if readme := next((files[p] for p in files if p.lower() == "readme.md"), None):
-        out += (f'<div class="panel" id="readme"><h2>How to set it up</h2><p class="muted">From the tool\'s '
-                f'README.md.</p>{to_html(readme, ids)}</div>')
-    out += (f'<div class="panel" id="get"><h2>Get the files</h2><p>Download and unpack them into a '
-            f'<code data-copy="" title="Click to copy">{slug}</code> folder with one command.</p>'
-            f'<h3>Windows (PowerShell)</h3>{code_block(win, ids)}<h3>macOS or Linux</h3>{code_block(nix, ids)}'
-            f'<p class="muted">These work on computers that trust this site\'s certificate.</p></div>')
     rows = []
     for path, content in files.items():
         n = next(ids)
@@ -163,7 +150,15 @@ def _files_panels(slug: str, base: str, zip_url: str, files: dict[str, str], ids
                     f'</summary><div class="row"><a class="btn tonal" href="{base}/files/{quote(path)}" download>'
                     f'Download</a><button type="button" class="tonal" data-copy="f{n}">Copy</button></div>'
                     f'<pre id="f{n}">{escape(content, quote=False)}</pre></details>')
-    return out + f'<div class="panel" id="files"><h2>Files</h2>{"".join(rows)}</div>'
+    readme = next((files[p] for p in files if p.lower() == "readme.md"), None)
+    readme = (f'<details class="file"><summary>README.md, shown as a page</summary>{to_html(readme, ids)}'
+              f'</details>') if readme else ""
+    return (f'<div class="panel" id="files"><h2>Files</h2><p>You only need these to look inside the tool or '
+           f'to set it up by hand. <code>devexai install</code> does it for you.</p>'
+           f'<div class="row"><a class="btn tonal" href="{base}/files.zip" download>Download all files (.zip)</a>'
+           f'</div>{readme}{"".join(rows)}<details class="file"><summary>Download and unpack with one command</summary>'
+           f'<h3>Windows (PowerShell)</h3>{code_block(win, ids)}<h3>macOS or Linux</h3>{code_block(nix, ids)}'
+           f'</details></div>')
 
 
 def post_page(folder: Path, name: str, files: dict[str, str] | None = None, origin: str = "") -> str | None:
@@ -190,8 +185,8 @@ def post_page(folder: Path, name: str, files: dict[str, str] | None = None, orig
     _, html = _section(html, "files")  # the Files panel below replaces the list
     note, html = _section(html, "install")
     links = (f'<div class="row"><a class="btn" href="#install">Install it</a><a class="btn tonal" '
-             f'href="{base}/files.zip" download>Download all files (.zip)</a></div>')
+             f'href="#files">See the files</a></div>')
     main = f'<div class="post">{html}</div>' + _files_panels(slug, base, f"{origin}{base}/files.zip", files, ids)
-    side = _install_panel(slug, base, origin, note, ids)
+    side = _install_panel(slug, origin, note, ids)
     return _page(title, hero("DevExAI blog", heading, byline + rest + links)
                  + f'<div class="layout"><div>{main}</div><aside class="side">{side}</aside></div>')

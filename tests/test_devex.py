@@ -59,7 +59,7 @@ def test_tool_list_has_only_published_tools_and_the_post_shows_the_commands(web,
     assert resp.status == 303 and resp.getheader("Location") == "/get"  # the old script is gone
     page = Client(web).request("GET", f"/blog/{listed[0]['post']}")[1]
     assert f">devexai install {listed[0]['name']}</pre>" in page
-    assert f">devexai install {listed[0]['name']} --global</pre>" in page
+    assert '<ol class="steps">' in page and ">--global</code>" in page
     assert f"devexai uninstall {listed[0]['name']}" in page and f'href="{url(web)}/get"' in page
 
 
