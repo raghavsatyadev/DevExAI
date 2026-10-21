@@ -13,9 +13,10 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from devexai import home
 from devexai.chat.headless import HeadlessChat
 from devexai.update import client, install, keys
-from devexai.update.manifest import UpdateError, sign, verify
+from devexai.update.manifest import UpdateError, platform_tag, sign, verify
 
-PLAT = "windows-x64"
+PLAT = platform_tag()  # the client asks for its own platform
+OTHER = "linux-x64" if PLAT != "linux-x64" else "windows-x64"
 KEY = Ed25519PrivateKey.generate()
 PUB = base64.b64encode(KEY.public_key().public_bytes(ser.Encoding.Raw, ser.PublicFormat.Raw)).decode()
 
@@ -116,8 +117,8 @@ def test_bad_hash_bad_licence_wrong_platform(server, tmp_path):
     assert install.current(root) is None and not list(root.glob("app-*"))
     with pytest.raises(UpdateError, match="licence"):
         client.latest(server.url, "wrong", current="0.1.0", plat=PLAT)
-    server.release("0.2.0", make_zip(tmp_path / "r.zip"), platform="linux-x64")
-    with pytest.raises(UpdateError, match="linux-x64"):
+    server.release("0.2.0", make_zip(tmp_path / "r.zip"), platform=OTHER)
+    with pytest.raises(UpdateError, match=OTHER):
         client.latest(server.url, "lic-123", current="0.1.0", plat=PLAT)
 
 

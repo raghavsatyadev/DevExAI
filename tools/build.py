@@ -22,7 +22,9 @@ from devexai.update.manifest import platform_tag  # noqa: E402
 
 # One analysis, two programs sharing one folder: devexai.exe for the terminal and devexaiw.exe, which has
 # no console window and runs as an icon in the notification area (the Start menu entry starts it).
+# Off Windows only devexai is built.
 SPEC = """
+import sys
 from PyInstaller.utils.hooks import collect_submodules
 
 a = Analysis([{entry!r}], pathex=[{src!r}],
@@ -30,8 +32,10 @@ a = Analysis([{entry!r}], pathex=[{src!r}],
              datas=[({settings!r}, "."), ({icon!r}, "assets/logo")])
 pyz = PYZ(a.pure)
 console = EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexai", console=True, icon={icon!r})
-tray = EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexaiw", console=False, icon={icon!r})
-COLLECT(console, tray, a.binaries, a.datas, name="devexai")
+programs = [console]
+if sys.platform == "win32":  # the tray icon is Windows-only
+    programs.append(EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexaiw", console=False, icon={icon!r}))
+COLLECT(*programs, a.binaries, a.datas, name="devexai")
 """
 
 
