@@ -18,6 +18,8 @@ desktop.ini
 
 # Bot runtime
 .env
+.env.*
+!.env.example
 data/
 .venv/
 .pytest_cache/

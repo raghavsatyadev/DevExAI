@@ -36,7 +36,7 @@ def setup_post(h: _Handler, form: dict[str, str]) -> None:
             return h._send(HTTPStatus.BAD_REQUEST, people_pages.setup_page(token, admin.name, str(e), email))
         server.setup_token = None
     server.bot.store.audit.add(None, admin.name, "setup", "admin account created")
-    h.sign_in(admin.name, "Welcome! Add the other maintainers on the People page.")
+    h.sign_in(admin.name, "Welcome! Connect Slack here, then add the other maintainers on the People page.", "/slack")
 
 
 def account_post(h: _Handler, sess: Session, me: Person, form: dict[str, str]) -> None:

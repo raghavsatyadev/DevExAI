@@ -19,14 +19,17 @@ import threading
 import urllib.parse
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from ..chat import Event
+from ..chat.slack_ids import unmention
 from ..config import WebSettings
 from ..flow import commands
 from ..stages import TERMINAL, WAITING_ON_MAINTAINER
 from . import pages, people_pages
 from .auth import SESSION_SECONDS, Session, Sessions, Throttle
 from .people_routes import account_post, people_post, setup_post
+from .slack_routes import slack_get, slack_post
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +74,7 @@ def is_loopback(host: str) -> bool:
 class Dashboard(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, bot, web: WebSettings):
+    def __init__(self, bot, web: WebSettings, env_path: Path = Path(".env")):
         self.local_only = is_loopback(web.host)
         if not self.local_only and not web.tls and not web.insecure_http:
             raise ValueError("[web] serving beyond this machine needs tls_cert and tls_key (or, on a network "
@@ -81,6 +84,9 @@ class Dashboard(ThreadingHTTPServer):
         self.sessions = Sessions()
         self.throttle = Throttle()
         self.setup_lock = threading.Lock()
+        self.chat_lock = threading.Lock()  # one chat platform switch at a time
+        self.env_path = env_path
+        self.slack_checks = None  # the Slack page's last test results
         self.notices: list[str] = []  # shown on every page, e.g. "claude CLI not found", "update ready"
         self.setup_token: str | None = None if bot.store.people.anyone_can_sign_in() else secrets.token_urlsafe(32)
         ctx = None
@@ -201,7 +207,7 @@ class _Handler(BaseHTTPRequestHandler):
         fields = urllib.parse.parse_qs(raw, keep_blank_values=True, max_num_fields=20)
         return {k: v[0] for k, v in fields.items()}
 
-    def sign_in(self, user: str, flash: str = "") -> None:
+    def sign_in(self, user: str, flash: str = "", where: str = "/") -> None:
         """Start a fresh session (a new id, so a planted cookie is useless) and go to the ideas list."""
         sessions = self.server.sessions
         if old := self._sid():
@@ -209,7 +215,7 @@ class _Handler(BaseHTTPRequestHandler):
         sid = sessions.create(user)
         if flash:
             sessions.flash(sessions.get(sid), flash)
-        self._redirect("/", self._cookie(sid))
+        self._redirect(where, self._cookie(sid))
 
     # GET
     def do_HEAD(self):
@@ -265,12 +271,16 @@ class _Handler(BaseHTTPRequestHandler):
             body = people_pages.people_page(bot.store.people.list(include_inactive=True),
                                             bot.store.ideas.list(100_000), csrf=sess.csrf, me=me.name)
             title = "People"
+        elif url.path == "/slack" and me.is_admin:
+            body, title = slack_get(self, sess), "Slack"
         elif m := re.fullmatch(r"/idea/(\d+)", url.path):
             try:
                 idea = bot.store.ideas.get(int(m.group(1)))
             except KeyError:
                 return self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such idea."))
-            body = pages.idea_page(idea, bot.store.audit.for_idea(idea.id), csrf=sess.csrf, maintainers=names)
+            audit = [{**a, "detail": unmention(a["detail"] or "", bot.store.meta)}
+                     for a in bot.store.audit.for_idea(idea.id)]
+            body = pages.idea_page(idea, audit, csrf=sess.csrf, maintainers=names, admin=me.is_admin)
             title = f"#{idea.id}"
         else:
             return self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such page."))
@@ -311,6 +321,10 @@ class _Handler(BaseHTTPRequestHandler):
             return account_post(self, sess, me, form)
         if path == "/people" and me.is_admin:
             return people_post(self, sess, me, form)
+        if path == "/slack" and me.is_admin:
+            return slack_post(self, sess, me, form)
+        if path == "/delete-idea" and me.is_admin:
+            return self._delete_idea(sess, me, form)
         if path == "/action":
             return self._action(sess, form)
         if path == "/project":
@@ -342,7 +356,7 @@ class _Handler(BaseHTTPRequestHandler):
         except Exception:
             log.exception("dashboard command %r failed", text)
             capture.replies.append("Sorry, something went wrong. The error is in the bot's log.")
-        return "\n".join(capture.replies)
+        return unmention("\n".join(capture.replies), bot.store.meta)
 
     def _action(self, sess: Session, form: dict[str, str]) -> None:
         action, idea = form.get("action", ""), form.get("idea", "")
@@ -352,6 +366,18 @@ class _Handler(BaseHTTPRequestHandler):
         said = self.run_command(sess, f"/devex-{action} {idea} {text}".rstrip(), int(idea))
         self.server.sessions.flash(sess, said or f"Done: {action} #{idea}.")
         self._redirect(f"/idea/{idea}")
+
+    def _delete_idea(self, sess: Session, me, form: dict[str, str]) -> None:
+        bot = self.server.bot
+        try:
+            idea = bot.store.ideas.get(int(form.get("idea", "")))
+            with self.server.chat_lock:
+                said = bot.delete_idea(idea, me.name)
+        except (KeyError, ValueError) as e:
+            self.server.sessions.flash(sess, str(e).strip("'") or "No such idea.")
+            return self._redirect(f"/idea/{form.get('idea', '')}" if form.get("idea", "").isdigit() else "/")
+        self.server.sessions.flash(sess, said)
+        self._redirect("/")
 
     def _project(self, sess: Session, form: dict[str, str]) -> None:
         op, name = form.get("op", ""), form.get("name", "").strip()

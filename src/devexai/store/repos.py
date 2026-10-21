@@ -72,6 +72,12 @@ class IdeaRepo:
             raise KeyError(f"no idea #{idea_id}")
         return _row_to_idea(row)
 
+    def delete(self, idea_id: int) -> None:
+        """Remove the idea and its history. The caller records the deletion itself."""
+        with self.db.connect() as c:
+            c.execute("DELETE FROM audit WHERE idea_id = ?", (idea_id,))
+            c.execute("DELETE FROM ideas WHERE id = ?", (idea_id,))
+
     def find_by_thread(self, thread_ref: str) -> Idea | None:
         with self.db.connect() as c:
             row = c.execute("SELECT * FROM ideas WHERE thread_ref = ?", (thread_ref,)).fetchone()

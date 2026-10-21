@@ -28,6 +28,7 @@ class ConsoleChat:
         self.inp = inp or sys.stdin
         self._ids = itertools.count(first_ref)  # continue after refs stored before a restart
         self._lock = threading.Lock()
+        self._stop = threading.Event()
 
     def post(self, channel, text, *, thread=None, buttons: tuple[Button, ...] = ()):
         with self._lock:
@@ -49,6 +50,8 @@ class ConsoleChat:
         print(HELP, file=self.out)
         self._prompt()
         for raw in self.inp:
+            if self._stop.is_set():  # another chat platform took over
+                return
             line = raw.strip()
             if not line:
                 self._prompt()
@@ -65,3 +68,7 @@ class ConsoleChat:
             else:
                 handler(Event(self.user, line, self.ideas_channel))
             self._prompt()
+
+    def stop(self) -> None:
+        """Stop after the next line typed (a console read cannot be interrupted)."""
+        self._stop.set()

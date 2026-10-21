@@ -76,7 +76,21 @@ class Bot:
         self.store.audit.add(idea.id, actor, f"stage:{dst.value}", text[:500])
         people = " ".join(self.chat.mention(u) for u in dict.fromkeys(filter(None, (idea.poster, idea.maintainer))))
         head = f"*{idea.label}* is now: *{LABELS[dst]}*  {people}".rstrip()
+        if buttons and self.tell_maintainer(idea, text, buttons):  # decisions go to the maintainer privately
+            text = f"{text}\nThe maintainer has been asked in a direct message.".lstrip()
+            buttons = ()
         self.say(idea, f"{head}\n{text}".rstrip(), buttons)
+
+    def tell_maintainer(self, idea: Idea, text: str, buttons: tuple[Button, ...] = ()) -> bool:
+        """Direct message to the idea's maintainer, where the platform has them. False: say it in the thread."""
+        dm = getattr(self.chat, "dm", None)
+        if dm is None or not idea.maintainer:
+            return False
+        try:
+            return dm(idea.maintainer, f"*{idea.label}* ({LABELS[idea.stage]}) needs you:\n{text}", buttons)
+        except Exception:
+            log.exception("could not message %s directly", idea.maintainer)
+            return False
 
     def assign(self, idea: Idea, topic: str | None) -> Idea:
         if idea.maintainer:
@@ -99,8 +113,26 @@ class Bot:
                 self.store.ideas.reset_wait(idea.id)
             self.store.audit.add(idea.id, actor, "reassigned", f"{name} -> {new}")
             self.say(idea, f"{self.chat.mention(new)} now looks after {idea.label} ({LABELS[idea.stage]}).")
+            self.tell_maintainer(self.store.ideas.get(idea.id), f"You now look after this, handed over from {name}. "
+                                 f"Use `/devex-status {idea.id}` to see where it is.")
             moved += 1
         return moved
+
+    def delete_idea(self, idea: Idea, actor: str) -> str:
+        """Admin clean-up: drop the idea and the bot's posts about it. Others' chat messages stay."""
+        if idea.stage in (Stage.RECEIVED, Stage.SAFETY_CHECK, Stage.RESEARCHING):
+            raise ValueError(f"{idea.label} is in an AI step right now; stop it first, then delete.")
+        removed = ""
+        clean = getattr(self.chat, "delete_thread", None)
+        if clean and idea.thread_ref:
+            try:
+                removed = f" Removed {clean(idea.thread_ref)} bot message(s) from chat."
+            except Exception as e:  # the record goes anyway; chat can be tidied by hand
+                log.exception("could not delete the chat thread of %s", idea.label)
+                removed = f" Chat messages were not removed ({e})."
+        self.store.ideas.delete(idea.id)
+        self.store.audit.add(None, actor, "idea:deleted", f"#{idea.id} {idea.title or idea.text[:80]}")
+        return f"Deleted {idea.label}.{removed}"
 
     def fail(self, idea_id: int, reason: str) -> None:
         idea = self.store.ideas.get(idea_id)
@@ -121,13 +153,16 @@ class Bot:
             self.store.ideas.reset_wait(idea.id)
             hours = f"{self.settings.maintainer_timeout_hours:g}h"
             if new == old:
-                self.say(idea, f"Reminder {self.chat.mention(old)}: {idea.label} has waited {hours} for you "
-                               f"({LABELS[idea.stage]}).")
+                if not self.tell_maintainer(idea, f"Reminder: this has waited {hours} for you."):
+                    self.say(idea, f"Reminder {self.chat.mention(old)}: {idea.label} has waited {hours} for you "
+                                   f"({LABELS[idea.stage]}).")
                 continue
             self.store.ideas.update(idea.id, maintainer=new)
             self.store.audit.add(idea.id, "bot", "reassigned", f"{old} -> {new}")
             self.say(idea, f"{self.chat.mention(old or 'nobody')} has not answered in {hours}, so "
                            f"{self.chat.mention(new)} now looks after {idea.label} ({LABELS[idea.stage]}).")
+            self.tell_maintainer(self.store.ideas.get(idea.id), f"You now look after this; {old or 'nobody'} "
+                                 f"did not answer in {hours}. Use `/devex-status {idea.id}` to see where it is.")
 
     def resume(self) -> None:
         """After a restart, re-queue ideas that were mid-way through an AI step."""

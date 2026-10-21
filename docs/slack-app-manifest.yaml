@@ -1,0 +1,88 @@
+# Slack app for DevExAI. Create it at https://api.slack.com/apps -> Create New App -> From a manifest,
+# pick the workspace, paste this file, then:
+#   1. Basic Information -> App-Level Tokens -> Generate, scope connections:write  -> the xapp-... token
+#   2. Install App -> Install to Workspace                                         -> the xoxb-... token
+#   3. Basic Information -> App icon: upload assets/logo/devexai-logo-1024.png
+#   4. In Slack: /invite @DevExAI in the ideas channel and the public announcements channel
+# Socket Mode is on, so the bot connects out to Slack: the server needs no public URL or open port.
+display_information:
+  name: DevExAI
+  description: Turns developer ideas into reviewed AI tools, with a safety check and a plan for each.
+  background_color: "#4355b9"
+features:
+  app_home:
+    home_tab_enabled: false
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: false
+  bot_user:
+    display_name: DevExAI
+    always_online: true
+  slash_commands:
+    - command: /devex-idea
+      description: Submit an idea for a developer tool
+      usage_hint: "<text and links>"
+      should_escape: false
+    - command: /devex-status
+      description: Where an idea is; without an id, your ideas
+      usage_hint: "[id]"
+      should_escape: false
+    - command: /devex-stop
+      description: Stop an idea (poster or maintainer)
+      usage_hint: "[id] <reason>"
+      should_escape: false
+    - command: /devex-live
+      description: "Poster: build it live in public, answering the bot and steering it"
+      usage_hint: "[id] yes|no"
+      should_escape: false
+    - command: /devex-suggest
+      description: Re-plan an idea with a suggestion
+      usage_hint: "[id] <change>"
+      should_escape: false
+    - command: /devex-approve
+      description: "Maintainers: approve a gate result, a plan or its resources"
+      usage_hint: "[id]"
+      should_escape: false
+    - command: /devex-deny
+      description: "Maintainers: reject, deny resources, or send a built tool back"
+      usage_hint: "[id] <reason>"
+      should_escape: false
+    - command: /devex-built
+      description: "Maintainers: the tool is built; send it to review"
+      usage_hint: "[id] [note]"
+      should_escape: false
+    - command: /devex-publish
+      description: "Maintainers: release it, write the blog post and announce it"
+      usage_hint: "[id] [install steps]"
+      should_escape: false
+    - command: /devex-assign
+      description: "Maintainers: hand the idea to another maintainer"
+      usage_hint: "[id] <maintainer>"
+      should_escape: false
+    - command: /devex-projects
+      description: "Maintainers: list, show, set or remove project summaries"
+      usage_hint: "[list | show <name> | set <name> <summary> | remove <name>]"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read   # @DevExAI in a channel
+      - channels:history    # ideas posted in the ideas channel, replies in idea threads
+      - channels:read
+      - chat:write          # thread updates and announcements
+      - commands            # the /devex-* commands
+      - im:history          # ideas sent by direct message
+      - im:read
+      - im:write
+      - users:read          # names for mentions
+      - users:read.email    # match Slack people to People-page emails
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.channels
+      - message.im
+  interactivity:
+    is_enabled: true        # Approve / Deny buttons
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

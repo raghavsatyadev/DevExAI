@@ -281,3 +281,16 @@ def test_add_with_bad_password_adds_no_one(web):
     alice.people(op="add", name="dana", email="dana@example.com", role="maintainer", topics="", password="short")
     alice.people(op="add", name="erin", email="", role="maintainer", topics="", password=PASSWORD)
     assert web.bot.store.people.get("dana") is None and web.bot.store.people.get("erin") is None
+
+
+def test_only_admins_delete_ideas(web):
+    idea = submit(web)
+    bob = Client(web).login("bob@example.com")
+    assert "Delete idea" not in bob.request("GET", f"/idea/{idea.id}")[1]
+    assert bob.request("POST", "/delete-idea", {"csrf": bob.csrf(), "idea": str(idea.id)})[0].status == 404
+    c = Client(web).login()
+    assert "Delete idea" in c.request("GET", f"/idea/{idea.id}")[1]
+    resp, _ = c.request("POST", "/delete-idea", {"csrf": c.csrf(f"/idea/{idea.id}"), "idea": str(idea.id)})
+    assert resp.status == 303 and resp.getheader("Location") == "/"
+    assert web.bot.store.ideas.list() == [] and web.bot.store.audit.for_idea(idea.id) == []
+    assert "Deleted" in c.request("GET", "/")[1]

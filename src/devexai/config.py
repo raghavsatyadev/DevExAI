@@ -29,6 +29,7 @@ class LLMSettings:
     provider: str = "claude_cli"
     claude_bin: str = "claude"
     timeout_seconds: int = 900
+    recordings: str = ""  # folder: claude_cli saves its replies there, provider "replay" answers from it
     models: dict[str, str] = field(
         default_factory=lambda: {"gate": "claude-opus-5-5", "planner": "claude-opus-5-5"}
     )
@@ -101,6 +102,25 @@ def load_dotenv(path: Path) -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
+def save_env(path: Path, updates: dict[str, str]) -> None:
+    """Set KEY=VALUE lines in .env (in place, other lines and comments kept) and in this process."""
+    for key, value in updates.items():
+        if not key.isidentifier() or any(c in value for c in "\r\n\"'#") or value != value.strip():
+            raise ValueError(f"refusing to write {key} to .env: unexpected characters")
+    lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    left = dict(updates)
+    for n, line in enumerate(lines):
+        key = line.split("=", 1)[0].strip()
+        if "=" in line and not line.lstrip().startswith("#") and key in left:
+            lines[n] = f"{key}={left.pop(key)}"
+    lines += [f"{k}={v}" for k, v in left.items()]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
+    os.environ.update(updates)
+
+
 def _web(raw: dict) -> WebSettings:
     return WebSettings(**{**raw, "allowed_hosts": tuple(h.lower() for h in raw.get("allowed_hosts", ()))})
 
@@ -128,6 +148,7 @@ def load_settings(path: Path) -> Settings:
             provider=llm.get("provider", defaults.provider),
             claude_bin=llm.get("claude_bin", defaults.claude_bin),
             timeout_seconds=int(llm.get("timeout_seconds", defaults.timeout_seconds)),
+            recordings=str(llm.get("recordings", "")),
             models={**defaults.models, **llm.get("models", {})},
         ),
         fetch=FetchSettings(**data.get("fetch", {})),

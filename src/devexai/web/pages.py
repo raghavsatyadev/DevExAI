@@ -57,7 +57,7 @@ def layout(title: str, body: str, *, user: str, is_admin: bool, csrf: str, flash
            notices: list[str] = ()) -> str:
     note = "".join(f'<div class="flash warn" role="status">{e(n)}</div>' for n in notices)
     note += f'<div class="flash" role="status">{e(flash)}</div>' if flash else ""
-    links = (*_NAV, ("/people", "People")) if is_admin else _NAV
+    links = (*_NAV, ("/people", "People"), ("/slack", "Slack")) if is_admin else _NAV
     nav = "".join(f'<a href="{h}"{" aria-current=page" if t == title else ""}>{t}</a>' for h, t in links)
     me = " aria-current=page" if title == "Account" else ""
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
@@ -185,7 +185,8 @@ def _actions(idea: Idea, csrf: str, maintainers: list[str]) -> str:
     return f'<h2>Actions</h2><div class="actions">{"".join(f)}</div>' if f else ""
 
 
-def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers: list[str]) -> str:
+def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers: list[str],
+              admin: bool = False) -> str:
     unchecked = not idea.gate or idea.gate.get("verdict") != "pass"
     facts = [("Stage", stage_pill(idea.stage)), ("Poster", e(idea.poster)), ("Maintainer", e(idea.maintainer)),
              ("Topic", e(idea.topic)), ("Thread", e(idea.thread_ref)), ("Created (UTC)", ts(idea.created_at)),
@@ -204,7 +205,11 @@ def idea_page(idea: Idea, audit: list[dict[str, str]], *, csrf: str, maintainers
             f'<h2>Idea text{warn}</h2><pre>{e(idea.text)}</pre>'
             f'<h2>Safety check</h2><div class="card">{_gate(idea.gate)}</div>'
             f'<h2>Plan</h2><div class="card">{_plan(idea.plan)}</div>'
-            f'<h2>History</h2><table><tr><th>When (UTC)</th><th>Who</th><th>What</th><th>Detail</th></tr>{log}</table>')
+            f'<h2>History</h2><table><tr><th>When (UTC)</th><th>Who</th><th>What</th><th>Detail</th></tr>{log}</table>'
+            + (f'<h2>Delete</h2><p class="muted">Removes this idea, its history and the bot&#39;s messages about it in '
+               f'chat. People&#39;s own replies stay. Cannot be undone.</p>'
+               f'{confirm(csrf, "/delete-idea", "Delete idea", f"Yes, delete #{idea.id}", idea=idea.id)}'
+               if admin else ""))
 
 
 def projects_page(projects: list[Project], *, csrf: str) -> str:

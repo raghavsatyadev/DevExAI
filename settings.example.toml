@@ -10,7 +10,8 @@ maintainer_timeout_hours = 24     # reassign if the assigned maintainer stays si
 adapter = "console"               # console (type in this window), none (dashboard only); slack later
 
 [llm]
-provider = "claude_cli"           # runs `claude -p` with all tools disabled
+provider = "claude_cli"           # runs `claude -p` with all tools disabled; "replay" answers from recordings
+# recordings = "data/llm-replies" # claude_cli saves each role's latest reply here; "replay" reuses them (no tokens)
 claude_bin = "claude"
 timeout_seconds = 900
 

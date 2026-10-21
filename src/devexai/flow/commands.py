@@ -227,7 +227,8 @@ def _cmd_built(bot: Bot, event: Event, rest: str) -> None:
     text = f"Built by {bot.chat.mention(event.user)}. {note}".strip()
     bot.move(idea, Stage.UNDER_REVIEW, f"{text}\nMaintainer: review the code, then "
              f"`/devex-publish {idea.id} [install steps]`, or `/devex-deny {idea.id} <changes needed>`.",
-             actor=event.user)
+             actor=event.user, buttons=(Button("Publish", f"/devex-publish {idea.id}"),
+                                        Button("Deny", f"/devex-deny {idea.id} <changes needed>")))
 
 
 def _cmd_publish(bot: Bot, event: Event, rest: str) -> None:

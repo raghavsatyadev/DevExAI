@@ -48,6 +48,8 @@ class ClaudeCLI:
             "--output-format", "json",
             "--no-session-persistence",
             "--setting-sources", "",
+            "--strict-mcp-config",
+            "--disable-slash-commands",
             "--json-schema", json.dumps(schema, separators=(",", ":")),
             "--system-prompt", system,
         ]

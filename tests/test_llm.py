@@ -33,3 +33,21 @@ def test_missing_binary_is_llm_error():
 def test_unknown_provider():
     with pytest.raises(ValueError):
         make_provider(LLMSettings(provider="nope"))
+
+
+def test_record_then_replay_without_tokens(tmp_path):
+    from devexai.llm.replay import Recorder, ReplayLLM
+
+    schema = {"properties": {"verdict": {}, "topic": {}}}
+    rec = Recorder(StubLLM({"gate": {"verdict": "pass", "topic": "android"}}), tmp_path)
+    assert rec.complete("gate", "s", "p", schema) == {"verdict": "pass", "topic": "android"}
+    (tmp_path / "planner.json").write_text('{"summary": "x", "links": []}', encoding="utf-8")
+    replay = ReplayLLM(tmp_path)
+    assert replay.complete("gate", "", "any idea", schema)["verdict"] == "pass"
+    assert replay.complete("planner", "", "", {"properties": {"summary": {}}}) == {"summary": "x"}
+    import pytest
+
+    from devexai.llm import LLMError
+
+    with pytest.raises(LLMError):
+        replay.complete("missing", "", "", {})

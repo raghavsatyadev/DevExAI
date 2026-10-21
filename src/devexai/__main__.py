@@ -3,6 +3,8 @@
     devexai                 run the bot and dashboard (first run: creates settings, opens the setup page)
     devexai install         copy this unpacked build into the per-user install folder
     devexai update          check our server now and stage a newer version
+    devexai --chat slack    run connected to Slack (tokens in .env); the dashboard's Slack page sets this too
+    devexai --replay        AI steps answer from recorded replies in llm-replies/ (tests without spending tokens)
     devexai --version
 """
 
@@ -51,6 +53,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--settings", type=Path, default=Path("settings.toml"))
     parser.add_argument("--env", type=Path, default=Path(".env"))
     parser.add_argument("--headless", action="store_true", help="no console chat; dashboard only")
+    parser.add_argument("--chat", choices=("console", "none", "slack"), help="chat platform for this run")
+    parser.add_argument("--replay", action="store_true",
+                        help="answer AI steps from recorded replies (llm-replies/), spending no tokens")
     parser.add_argument("--no-browser", action="store_true", help="do not open the setup page on first run")
     args = parser.parse_args(argv)
     if args.command == "install":
@@ -66,8 +71,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f"First run: created {data / home.SETTINGS}. Edit it to change maintainers, network and updates.")
     from .app import run
 
-    run(args.settings, args.env, adapter="none" if args.headless else None,
-        open_browser=home.frozen() and not args.no_browser)
+    run(args.settings, args.env, adapter="none" if args.headless else args.chat,
+        open_browser=home.frozen() and not args.no_browser, replay=args.replay)
 
 
 if __name__ == "__main__":

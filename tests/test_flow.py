@@ -344,3 +344,30 @@ def test_publish_loses_to_a_concurrent_deny_without_writing_a_post(make_bot, mon
     assert only_idea(bot).stage is Stage.BUILDING
     assert not list(bot.settings.blog.dir.glob("*.md"))
     assert any("moved on already" in t for t in bot.chat.texts())
+
+
+class DmChat(FakeChat):
+    """A platform with direct messages: they are recorded instead of posted."""
+
+    def __init__(self):
+        super().__init__()
+        self.dms = []
+
+    def dm(self, user, text, buttons=()):
+        self.dms.append((user, text, tuple(buttons)))
+        return True
+
+
+def test_maintainer_decisions_go_to_a_direct_message(make_bot):
+    bot = make_bot()
+    bot.chat = DmChat()
+    say(bot, "carol", "Run ktlint before commit")
+    idea = only_idea(bot)
+    user, text, buttons = bot.chat.dms[-1]
+    assert user == "alice" and "Approve plan" in [b.label for b in buttons] and idea.label in text
+    public = [p for p in bot.chat.posts if p.ref == idea.thread_ref]
+    assert any("asked in a direct message" in p.text for p in public)
+    assert all(not any(b.command.startswith("/devex-approve") for b in p.buttons) for p in public)
+    assert any(b.command.startswith("/devex-live") for p in public for b in p.buttons)  # poster asked publicly
+    say(bot, "alice", f"/devex-approve {idea.id}", thread="D1:1.0")  # the DM button carries the id
+    assert only_idea(bot).stage is Stage.BUILDING
