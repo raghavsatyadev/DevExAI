@@ -28,8 +28,11 @@ SolidCompression=yes
 WizardStyle=modern
 
 [Messages]
-FinishedLabelNoIcons=DevExAI is installed.%n%nIn a new terminal:%n    devexai start admin    starts the bot and opens the dashboard (again: just opens it)%n    devexai install <tool>    installs a published tool, as developers do%n%nOr start it from the Start menu: DevExAI.
-FinishedLabel=DevExAI is installed.%n%nIn a new terminal:%n    devexai start admin    starts the bot and opens the dashboard (again: just opens it)%n    devexai install <tool>    installs a published tool, as developers do%n%nOr start it from the Start menu: DevExAI.
+FinishedLabelNoIcons=DevExAI is installed.%n%nIn a new terminal:%n    devexai start admin    starts the bot and opens the dashboard (again: just opens it)%n    devexai stop admin    stops it%n    devexai status    shows whether it runs and where%n    devexai install <tool>    installs a published tool, as developers do%n%nOr start it from the Start menu: DevExAI.
+FinishedLabel=DevExAI is installed.%n%nIn a new terminal:%n    devexai start admin    starts the bot and opens the dashboard (again: just opens it)%n    devexai stop admin    stops it%n    devexai status    shows whether it runs and where%n    devexai install <tool>    installs a published tool, as developers do%n%nOr start it from the Start menu: DevExAI.
+
+[Tasks]
+Name: autostart; Description: "Start DevExAI when I sign in to Windows (as an icon in the notification area)"
 
 [Files]
 Source: "{#Root}\dist\devexai\*"; DestDir: "{tmp}\devexai"; Flags: recursesubdirs ignoreversion deleteafterinstall
@@ -46,6 +49,7 @@ Type: filesandordirs; Name: "{app}\.trash"
 Type: files; Name: "{app}\current.txt"
 Type: files; Name: "{app}\devexai.cmd"
 Type: files; Name: "{userprograms}\DevExAI.lnk"
+Type: files; Name: "{userstartup}\DevExAI.lnk"
 
 [Code]
 #include "path.iss"
@@ -53,8 +57,9 @@ Type: files; Name: "{userprograms}\DevExAI.lnk"
 const
   STOP_REQUEST = 32771;  // WM_APP + 3, see src/devexai/tray.py
 
-// Ask a running tray icon to quit, and wait for it. False if it is still running.
-function StopBot(): Boolean;
+// Ask a running tray icon to quit, and wait for it. False if it is still running. For versions before
+// `devexai stop admin`, which also stops a bot started from a terminal.
+function StopTray(): Boolean;
 var Wnd: HWND; I: Integer;
 begin
   Result := True;
@@ -72,6 +77,20 @@ begin
   Result := False;
 end;
 
+// `devexai stop admin` with the installed version; the tray message when that version lacks it.
+function StopBot(): Boolean;
+var Launcher: string; Code: Integer;
+begin
+  Launcher := ExpandConstant('{app}\devexai.cmd');
+  if FileExists(Launcher) and Exec(Launcher, 'stop admin', '', SW_HIDE, ewWaitUntilTerminated, Code)
+     and (Code = 0) then begin
+    Sleep(1000);  // let the process finish closing its files
+    Result := True;
+    exit;
+  end;
+  Result := StopTray();
+end;
+
 // DevExAI for developers puts another devexai on PATH; the Admin one already has its commands.
 procedure RemoveUserEdition();
 var Uninstaller: string; Code: Integer;
@@ -85,7 +104,7 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
   if not StopBot() then
-    Result := 'DevExAI is still running. Quit it from its icon in the notification area, then run this setup again.';
+    Result := 'DevExAI is still running. Run devexai stop admin (or quit it from its icon), then run this setup again.';
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -97,13 +116,17 @@ begin
   if not Exec(ExpandConstant('{tmp}\devexai\devexai.exe'), 'install', '', SW_HIDE, ewWaitUntilTerminated, Code)
      or (Code <> 0) then
     RaiseException('Copying DevExAI into ' + ExpandConstant('{app}') + ' failed (code ' + IntToStr(Code) + ').');
+  if WizardIsTaskSelected('autostart') then
+    Exec(ExpandConstant('{tmp}\devexai\devexai.exe'), 'autostart on', '', SW_HIDE, ewWaitUntilTerminated, Code)
+  else
+    Exec(ExpandConstant('{tmp}\devexai\devexai.exe'), 'autostart off', '', SW_HIDE, ewWaitUntilTerminated, Code);
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then begin
     if not StopBot() then
-      SuppressibleMsgBox('DevExAI is still running; some files may stay behind. Quit it from its icon next time.',
+      SuppressibleMsgBox('DevExAI is still running; some files may stay behind. Run devexai stop admin next time.',
         mbInformation, MB_OK, IDOK);
     if SuppressibleMsgBox('Also delete DevExAI''s data: settings, the database, the blog posts and the TLS files in '
          + ExpandConstant('{app}\data') + '?' + #13#10#13#10 + 'Choose No to keep them for a later install.',

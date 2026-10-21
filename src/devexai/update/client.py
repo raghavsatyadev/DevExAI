@@ -94,6 +94,6 @@ def update(server: str, licence: str, root: Path, current: str = __version__) ->
         install.stage(zip_path, root, rel.version)
     install.prune(root, {install.app_dir(rel.version), install.app_dir(current)})
     if root.resolve() == home.install_root().resolve():  # the real install, not a test folder
-        shortcut.write(root)  # the Start menu entry starts the new version from now on
+        shortcut.refresh(root)  # the Start menu (and Startup) entry starts the new version from now on
     log.info("update %s staged; it runs on the next start", rel.version)
     return rel

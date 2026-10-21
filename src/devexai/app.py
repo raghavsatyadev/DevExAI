@@ -111,7 +111,7 @@ def remember_server(web) -> None:
 
 def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | None = None,
         open_browser: bool = False, replay: bool = False, tray: bool = False, open_dashboard: bool = False) -> None:
-    """Run until the chat platform stops (Ctrl+C, or Quit in the tray icon's menu).
+    """Run until the chat platform stops (Ctrl+C, Quit in the tray icon's menu, or `devexai stop admin`).
 
     With tray, there is no console: the console chat is replaced by none, and messages that would be
     printed are shown as notifications next to the icon.
@@ -151,6 +151,9 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
                 logging.exception("tick failed")
 
     threading.Thread(target=ticker, name="devexai-tick", daemon=True).start()
+    from .instance import watch_stop
+
+    watch_stop(Path.cwd(), stop, lambda: bot.chat.stop())  # `devexai stop admin`
     for note in notices:
         logging.warning(note)
         print(f"Warning: {note}", flush=True)

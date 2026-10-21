@@ -1,6 +1,7 @@
-"""The Start menu entry "DevExAI" (Windows), which starts devexaiw.exe: the tray icon, no console.
+"""The Start menu entry "DevExAI" (Windows), which starts devexaiw.exe: the tray icon, no console; and the
+same entry in the Startup folder when DevExAI starts at sign-in (`devexai autostart on`).
 
-It points into the current app-<version> folder, so install and every staged update rewrite it.
+They point into the current app-<version> folder, so install and every staged update rewrite them.
 Written by PowerShell's WScript.Shell, as Python has no stdlib way to make a .lnk file.
 """
 
@@ -26,13 +27,25 @@ def start_menu_link() -> Path:
     return Path(base) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "DevExAI.lnk"
 
 
-def write(root: Path) -> Path | None:
-    """Point the Start menu entry at the current version's devexaiw.exe. None when there is nothing to do."""
+def startup_link() -> Path:
+    return start_menu_link().parent / "Startup" / "DevExAI.lnk"
+
+
+def refresh(root: Path) -> Path | None:
+    """Rewrite the Start menu entry, and the Startup one when DevExAI starts at sign-in."""
+    if startup_link().is_file():
+        write(root, startup_link())
+    return write(root)
+
+
+def write(root: Path, link: Path | None = None) -> Path | None:
+    """Point the Start menu entry (or link) at the current version's devexaiw.exe. None when there is nothing
+    to do."""
     folder = current(root)
     exe = root / folder / TRAY_EXE if folder else None
     if os.name != "nt" or not exe or not exe.is_file():
         return None
-    link = start_menu_link()
+    link = link or start_menu_link()
     link.parent.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "DX_LNK": str(link), "DX_EXE": str(exe), "DX_DIR": str(exe.parent)}
     try:

@@ -3,6 +3,10 @@
     devexai                 run the bot and dashboard (first run: creates settings, opens the setup page)
     devexai start admin     start the bot and dashboard in the background and open the dashboard; when
                             they already run, just open the dashboard (never a second bot)
+    devexai stop admin      ask the running bot to quit, and wait for it
+    devexai status          is it running, its dashboard, its data folder, does it start at sign-in
+    devexai autostart on|off
+                            start DevExAI (the tray icon) when this user signs in to Windows
     devexai install         copy this unpacked build into the per-user install folder (the setup runs it)
     devexai update          check our server now and stage a newer version
     devexai install <tool>, uninstall <tool>, list, connect <server>
@@ -30,7 +34,7 @@ def _install() -> None:
         sys.exit("install works from the packaged build only; from source, use `uv run devexai`.")
     root = home.install_root()
     launcher = install.install(Path(sys.executable).resolve().parent, root, __version__)
-    link = shortcut.write(root)
+    link = shortcut.refresh(root)
     data = home.data_home()
     first = home.prepare(data)
     print(f"Installed DevExAI {__version__} in {root}\nStart it with: {launcher}\nSettings and data: {data}"
@@ -88,7 +92,7 @@ def _start(args: argparse.Namespace, data: Path) -> None:
     subprocess.Popen(background_command(args), cwd=data, creationflags=flags, start_new_session=os.name != "nt",
                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
     print("DevExAI is starting in the background; the dashboard opens in your browser."
-          + ("\nQuit it from the DevExAI icon in the notification area." if os.name == "nt" else ""))
+          + "\nStop it with: devexai stop admin" + (" (or Quit in its notification-area icon)." if os.name == "nt" else ""))
 
 
 def windowed() -> bool:
@@ -122,8 +126,9 @@ def _main(argv: list[str] | None = None) -> None:
 
         sys.exit(tool_main(argv))
     parser = argparse.ArgumentParser(prog="devexai", description="DevExAI idea bot")
-    parser.add_argument("command", nargs="?", default="run", choices=("run", "start", "install", "update"))
-    parser.add_argument("what", nargs="?", choices=("admin",), help="start admin: the bot and dashboard")
+    parser.add_argument("command", nargs="?", default="run", choices=("run", "start", "stop", "status", "autostart", "install", "update"))
+    parser.add_argument("what", nargs="?", choices=("admin", "on", "off"),
+                        help="start admin / stop admin: the bot and dashboard; autostart on|off")
     parser.add_argument("--version", action="version", version=f"DevExAI {__version__}")
     parser.add_argument("--home", type=Path, help="folder holding settings.toml, .env and data/")
     parser.add_argument("--settings", type=Path, default=Path("settings.toml"))
@@ -146,17 +151,33 @@ def _main(argv: list[str] | None = None) -> None:
             return
     if args.command == "install":
         return _install()
-    data = home.data_home(args.home)
+    if args.command == "autostart":
+        if args.what not in (None, "on", "off"):
+            parser.error("devexai autostart on, or devexai autostart off")
+        from .control import autostart
+
+        return autostart(args.what)
+    data = home.data_home(args.home).resolve()
     first = home.prepare(data) if (home.frozen() or args.home) else False
     os.chdir(data)  # every relative path in settings (db, blog, log) is under the data home
     if not args.settings.is_file():
         parser.error(f"{args.settings.resolve()} not found; copy settings.example.toml to settings.toml")
     if args.command == "update":
         return _update(args.settings, args.env)
-    if args.command == "start":
+    if args.command in ("start", "stop"):
         if args.what != "admin":
-            parser.error("say what to start: devexai start admin")
+            parser.error(f"say what to {args.command}: devexai {args.command} admin")
+        if args.command == "stop":
+            from .control import stop
+
+            return stop(data)
         return _start(args, data)
+    if args.command == "status":
+        from .config import load_settings
+        from .control import status
+        from .web.server import dashboard_url
+
+        return status(data, dashboard_url(load_settings(args.settings).web) + "/")
     if first:
         print(f"First run: created {data / home.SETTINGS}. Edit it to change maintainers, network and updates.")
     from . import instance
@@ -174,9 +195,13 @@ def _main(argv: list[str] | None = None) -> None:
         return
     from .app import run
 
-    run(args.settings, args.env, adapter="none" if args.headless else args.chat,
-        open_browser=home.frozen() and not args.no_browser, replay=args.replay, tray=tray_mode,
-        open_dashboard=args.open_dashboard)
+    instance.started(data)
+    try:
+        run(args.settings, args.env, adapter="none" if args.headless else args.chat,
+            open_browser=home.frozen() and not args.no_browser, replay=args.replay, tray=tray_mode,
+            open_dashboard=args.open_dashboard)
+    finally:
+        instance.stopped(data)
 
 
 if __name__ == "__main__":

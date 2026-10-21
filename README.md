@@ -181,7 +181,7 @@ hands it out, over the company network only:
 | Developers on Windows | **DevExAI-User-Setup.exe** | Installs `devexai` for this user (no Python, no admin rights), puts it on PATH, trusts the company certificate authority and connects to the server. |
 | Developers on Linux | `curl -fsSk <server>/get/install.sh \| sh` | The same, into `~/.local/bin`. |
 | Anyone with Python 3.11+ (macOS) | `devexai.pyz` | The same command as one file: `python3 devexai.pyz install <tool>`. |
-| The admin, on the host | **DevExAI-Admin-Setup-<version>.exe** | Installs the bot and dashboard plus the same `devexai` commands. `devexai start admin` starts the bot in the background and opens the dashboard; run again, it only opens the dashboard (one bot per data folder). |
+| The admin, on the host | **DevExAI-Admin-Setup-<version>.exe** | Installs the bot and dashboard plus the same `devexai` commands. `devexai start admin` starts the bot in the background and opens the dashboard; run again, it only opens the dashboard (one bot per data folder). `devexai stop admin` stops it; `devexai status` shows whether it runs, its dashboard and its data folder. The setup's "Start DevExAI when I sign in" box (later: `devexai autostart on` or `off`) starts it at Windows sign-in as a notification-area icon. |
 
 The developer command is its own package (`src/devexai_cli`, standard library only) and holds no admin
 code; a test and the build both check that. `devexai update` gets a newer one from the server (checked
