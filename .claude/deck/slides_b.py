@@ -32,26 +32,30 @@ def s11_install(prs, n):
     s = blank(prs)
     header(s, "10 · Installing", "Your project or your whole machine — your choice", n)
     opts = [("This project only", "--project",
-             "Files go into the project's folder (.claude/, .gemini/, .codex/) and can be "
-             "committed, so the whole team gets it.", "Team or project tools"),
+             "The tool's files go into the project's .claude/, .gemini/ and .codex/ folders "
+             "and can be committed, so the whole team gets it.", "Team or project tools"),
             ("My whole machine", "--global",
-             "Files go into your personal settings folder and work in every project.",
+             "The same files go into those folders in your home folder and work in every "
+             "project.",
              "Personal productivity tools")]
     for (x, w), (t, flag, b, good) in zip(cols(2, 0.4), opts):
         step(1 if flag == "--project" else 2)
         rect(s, x, 1.75, w, 3.6, fill=LIGHT)
         text(s, x + 0.35, 1.95, w - 0.7, 0.5, t, size=22, bold=True, color=NAVY)
         rect(s, x + 0.35, 2.6, w - 0.7, 0.6, fill=NAVY)
-        text(s, x + 0.55, 2.6, w - 1.1, 0.6, [[("devex install <tool> " + flag, MONO)]],
-             size=16, anchor="m")
+        text(s, x + 0.55, 2.6, w - 1.1, 0.6, [[("python devex.py install <tool> " + flag, MONO)]],
+             size=14, anchor="m")
         text(s, x + 0.35, 3.4, w - 0.7, 1.1, b, size=16, color=INK)
         text(s, x + 0.35, 4.65, w - 0.7, 0.5,
              [[("Good for: ", {"bold": True, "color": ACCENT}), good]], size=16,
              color=INK)
     step(3)
-    for (x, w), label in zip(cols(2, 0.4), ["Shows exactly what it will change first",
-                                            "devex uninstall removes it cleanly"]):
-        chip(s, x, 5.7, w, 0.65, label, fill=GREEN_SOFT, color=GREEN, size=16)
+    for (x, w), label in zip(cols(3, 0.3), ["Shows each change, asks first",
+                                            "Never runs the tool's code",
+                                            "Uninstall keeps your edits"]):
+        chip(s, x, 5.6, w, 0.65, label, fill=GREEN_SOFT, color=GREEN, size=16)
+    text(s, MARGIN, 6.4, CW, 0.45, "devex.py is one Python file from /blog/devex.py. It never edits settings files, "
+         "and never overwrites other files without --force.", size=14, color=MUTED)
 
 
 def s12_models(prs, n):
