@@ -7,7 +7,7 @@ public_channel = "#ai-tools"      # where published tools are celebrated
 maintainer_timeout_hours = 24     # reassign if the assigned maintainer stays silent
 
 [chat]
-adapter = "console"               # console (type in this window), none (dashboard only); slack later
+adapter = "console"               # console (type in this window), none (dashboard only), slack (tokens in .env; see the Slack page)
 
 [llm]
 provider = "claude_cli"           # runs `claude -p` with all tools disabled; "replay" answers from recordings

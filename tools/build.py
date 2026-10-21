@@ -28,6 +28,7 @@ def main() -> None:
         sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--console",
         "--name", "devexai", "--distpath", str(dist), "--workpath", str(work), "--specpath", str(work),
         "--paths", str(ROOT / "src"), "--collect-submodules", "devexai",
+        "--collect-submodules", "slack_sdk",  # imported lazily, so the scan alone misses it
         "--add-data", f"{ROOT / 'settings.example.toml'}{os.pathsep}.",
         str(ROOT / "tools" / "entry.py"),
     ], check=True, cwd=ROOT)
