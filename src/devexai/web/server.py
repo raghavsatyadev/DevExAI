@@ -29,6 +29,7 @@ from ..stages import TERMINAL, WAITING_ON_MAINTAINER
 from . import pages, people_pages
 from .auth import SESSION_SECONDS, Session, Sessions, Throttle
 from .blog_routes import blog_get
+from .get_routes import get_get
 from .people_routes import account_post, people_post, setup_post
 from .slack_routes import slack_get, slack_post
 
@@ -61,6 +62,13 @@ class _Capture:
 
     def reply(self, event, text, buttons=()):
         self.replies.append(text)
+
+
+def dashboard_url(web: WebSettings, port: int | None = None) -> str:
+    """Where people open the dashboard: the first allowed name, or this machine when it is not shared."""
+    scheme = "https" if web.tls else "http"
+    host = "127.0.0.1" if is_loopback(web.host) or not web.allowed_hosts else web.allowed_hosts[0]
+    return f"{scheme}://{host}:{port or web.port}"
 
 
 def is_loopback(host: str) -> bool:
@@ -113,9 +121,7 @@ class Dashboard(ThreadingHTTPServer):
 
     @property
     def base_url(self) -> str:
-        scheme = "https" if self.web.tls else "http"
-        host = "127.0.0.1" if self.local_only or not self.web.allowed_hosts else self.web.allowed_hosts[0]
-        return f"{scheme}://{host}:{self.port}"
+        return dashboard_url(self.web, self.port)
 
     @property
     def setup_url(self) -> str | None:
@@ -249,6 +255,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, people_pages.login_page())
         if url.path == "/blog" or url.path.startswith("/blog/"):  # the blog is for everyone: no sign-in
             return blog_get(self, url.path, _SECURITY_HEADERS["Content-Security-Policy"])
+        if url.path == "/get" or url.path.startswith("/get/"):  # the developer command: no sign-in either
+            return get_get(self, url.path, _SECURITY_HEADERS["Content-Security-Policy"])
         signed_in = self._session()
         if signed_in is None:
             return self._redirect("/login")

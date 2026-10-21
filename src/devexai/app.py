@@ -81,16 +81,35 @@ def start_tray(bot: Bot, web, log_path: Path):
         else:
             os.startfile(Path.cwd())
 
+    def quit_bot() -> None:
+        bot.chat.stop()  # ends the main loop in run()
+
     menu = [("Open dashboard", open_dashboard),
             ("Open data folder", lambda: os.startfile(Path.cwd())),
             ("Open log", lambda: os.startfile(log_path.resolve())),
             None,
-            ("Quit DevExAI", lambda: bot.chat.stop())]  # ends the main loop in run()
-    return tray.create("DevExAI", menu, open_dashboard, home.bundled("assets/logo/devexai.ico"))
+            ("Quit DevExAI", quit_bot)]
+    return tray.create("DevExAI", menu, open_dashboard, home.bundled("assets/logo/devexai.ico"), quit_bot)
+
+
+def remember_server(web) -> None:
+    """The admin's own `devexai install <tool>` talks to this dashboard without a `devexai connect` first."""
+    from devexai_cli.net import ca_file, config_file, save_server
+
+    from .web.get_routes import authority_pem
+
+    user = Path.home()
+    try:
+        if not config_file(user).is_file():
+            save_server(web.base_url, user)
+            if (pem := authority_pem(web.web)) and not ca_file(user).is_file():
+                ca_file(user).write_bytes(pem)
+    except OSError:
+        logging.warning("could not save the server address for devexai install", exc_info=True)
 
 
 def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | None = None,
-        open_browser: bool = False, replay: bool = False, tray: bool = False) -> None:
+        open_browser: bool = False, replay: bool = False, tray: bool = False, open_dashboard: bool = False) -> None:
     """Run until the chat platform stops (Ctrl+C, or Quit in the tray icon's menu).
 
     With tray, there is no console: the console chat is replaced by none, and messages that would be
@@ -148,9 +167,10 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
             if not bot.settings.blog.base_url:  # no blog site yet: the dashboard serves the posts at /blog
                 bot.settings = replace(bot.settings, blog=replace(bot.settings.blog, base_url=f"{web.base_url}/blog"))
             web.start()
+            remember_server(web)
             print(web.startup_message(), flush=True)
-            if open_browser and web.setup_url:  # first run: go straight to creating the admin account
-                webbrowser.open(web.setup_url)
+            if open_dashboard or (open_browser and web.setup_url):  # first run: create the admin account
+                webbrowser.open(web.setup_url or f"{web.base_url}/")
     icon = start_tray(bot, web, log_path) if tray else None
     if icon:
         if notices:  # Windows shows one notification at a time, so the warnings go first and together

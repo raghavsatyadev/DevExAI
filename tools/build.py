@@ -28,9 +28,11 @@ import sys
 from PyInstaller.utils.hooks import collect_submodules
 
 a = Analysis([{entry!r}], pathex=[{src!r}],
-             hiddenimports=collect_submodules("devexai") + collect_submodules("slack_sdk"),  # imported lazily
-             datas=[({settings!r}, "."), ({icon!r}, "assets/logo"),
-                    ({devex!r}, "devexai")])  # the server hands its source out at /blog/devex.py
+             hiddenimports=collect_submodules("devexai") + collect_submodules("devexai_cli")
+             + collect_submodules("slack_sdk"),  # imported lazily
+             # the dashboard hands out at /get: the developer builds (user/) and devexai.pyz, made from the
+             # developer command's source (devexai_cli_src/)
+             datas=[({settings!r}, "."), ({icon!r}, "assets/logo"), ({cli!r}, "devexai_cli_src"), *{user!r}])
 pyz = PYZ(a.pure)
 console = EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexai", console=True, icon={icon!r})
 programs = [console]
@@ -38,6 +40,14 @@ if sys.platform == "win32":  # the tray icon is Windows-only
     programs.append(EXE(pyz, a.scripts, [], exclude_binaries=True, name="devexaiw", console=False, icon={icon!r}))
 COLLECT(*programs, a.binaries, a.datas, name="devexai")
 """
+
+
+def user_files() -> list[tuple[str, str]]:
+    """The developer builds made so far (tools/build_user.py, tools/build_setup.py user; the Linux one in Docker)."""
+    found = [ROOT / "dist" / "user" / name for name in ("DevExAI-User-Setup.exe", "devexai-linux-x64")]
+    for path in found:
+        print(f"{'with' if path.is_file() else 'WITHOUT'} {path.name}")
+    return [(str(p), "user") for p in found if p.is_file()]
 
 
 def main() -> None:
@@ -48,7 +58,7 @@ def main() -> None:
     spec.write_text(SPEC.format(entry=str(ROOT / "tools" / "entry.py"), src=str(ROOT / "src"),
                                 settings=str(ROOT / "settings.example.toml"),
                                 icon=str(ROOT / "assets" / "logo" / "devexai.ico"),
-                                devex=str(ROOT / "src" / "devexai" / "devex.py")), encoding="utf-8")
+                                cli=str(ROOT / "src" / "devexai_cli"), user=user_files()), encoding="utf-8")
     subprocess.run([sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean",
                     "--distpath", str(dist), "--workpath", str(work), str(spec)], check=True, cwd=ROOT)
     out = dist / f"devexai-{__version__}-{platform_tag()}.zip"

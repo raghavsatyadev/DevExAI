@@ -1,8 +1,12 @@
 """Command line.
 
     devexai                 run the bot and dashboard (first run: creates settings, opens the setup page)
-    devexai install         copy this unpacked build into the per-user install folder
+    devexai start admin     start the bot and dashboard in the background and open the dashboard; when
+                            they already run, just open the dashboard (never a second bot)
+    devexai install         copy this unpacked build into the per-user install folder (the setup runs it)
     devexai update          check our server now and stage a newer version
+    devexai install <tool>, uninstall <tool>, list, connect <server>
+                            the developer commands (devexai_cli), aimed at this machine's dashboard
     devexai --chat slack    run connected to Slack (tokens in .env); the dashboard's Slack page sets this too
     devexai --replay        AI steps answer from recorded replies in llm-replies/ (tests without spending tokens)
     devexai --tray          run with an icon in the Windows notification area instead of console chat;
@@ -46,6 +50,47 @@ def _update(settings_path: Path, env_path: Path) -> None:
         sys.exit(f"Update failed: {e}")
 
 
+TOOL_COMMANDS = ("list", "uninstall", "connect")
+
+
+def tool_command(argv: list[str]) -> bool:
+    """The developer commands: `install` with a tool name, and list / uninstall / connect."""
+    return bool(argv) and (argv[0] in TOOL_COMMANDS or
+                           (argv[0] == "install" and len(argv) > 1 and not argv[1].startswith("-")))
+
+
+def background_command(args: argparse.Namespace) -> list[str]:
+    """How `start admin` runs the bot without a console: the tray build on Windows, headless elsewhere."""
+    passed = [*(["--home", str(args.home)] if args.home else []), *(["--chat", args.chat] if args.chat else []),
+              *(["--replay"] if args.replay else []), "--open-dashboard"]
+    if home.frozen() and os.name == "nt":
+        return [str(Path(sys.executable).with_name("devexaiw.exe")), *passed]
+    program = [sys.executable] if home.frozen() else [sys.executable, "-m", "devexai"]
+    return [*program, "--tray" if os.name == "nt" else "--headless", *passed]
+
+
+def _start(args: argparse.Namespace, data: Path) -> None:
+    import subprocess
+    import webbrowser
+
+    from . import instance
+    from .config import load_settings
+    from .web.server import dashboard_url
+
+    lock = instance.acquire(data / instance.LOCK)
+    if lock is None:  # already running: the dashboard is all that was missing
+        url = dashboard_url(load_settings(data / args.settings).web) + "/"
+        webbrowser.open(url)
+        print(f"DevExAI is already running. Opened {url}")
+        return
+    instance.release(lock)
+    flags = (subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP) if os.name == "nt" else 0
+    subprocess.Popen(background_command(args), cwd=data, creationflags=flags, start_new_session=os.name != "nt",
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True)
+    print("DevExAI is starting in the background; the dashboard opens in your browser."
+          + ("\nQuit it from the DevExAI icon in the notification area." if os.name == "nt" else ""))
+
+
 def windowed() -> bool:
     """True in devexaiw.exe, the build without a console: nothing printed is seen there."""
     return home.frozen() and Path(sys.executable).name.lower() == "devexaiw.exe"
@@ -72,8 +117,13 @@ def _main(argv: list[str] | None = None) -> None:
         from .gate import fetch_worker
 
         return fetch_worker.main()
+    if tool_command(argv):  # the same commands developers get from DevExAI-User, aimed at this dashboard
+        from devexai_cli.cli import main as tool_main
+
+        sys.exit(tool_main(argv))
     parser = argparse.ArgumentParser(prog="devexai", description="DevExAI idea bot")
-    parser.add_argument("command", nargs="?", default="run", choices=("run", "install", "update"))
+    parser.add_argument("command", nargs="?", default="run", choices=("run", "start", "install", "update"))
+    parser.add_argument("what", nargs="?", choices=("admin",), help="start admin: the bot and dashboard")
     parser.add_argument("--version", action="version", version=f"DevExAI {__version__}")
     parser.add_argument("--home", type=Path, help="folder holding settings.toml, .env and data/")
     parser.add_argument("--settings", type=Path, default=Path("settings.toml"))
@@ -84,6 +134,7 @@ def _main(argv: list[str] | None = None) -> None:
                         help="answer AI steps from recorded replies (llm-replies/), spending no tokens")
     parser.add_argument("--no-browser", action="store_true", help="do not open the setup page on first run")
     parser.add_argument("--tray", action="store_true", help="icon in the Windows notification area, no console chat")
+    parser.add_argument("--open-dashboard", action="store_true", help="open the dashboard once it is up")
     if windowed():  # argparse writes help and errors to stderr, which a windowed exe lacks
         parser.exit = lambda status=0, message=None: sys.exit(message or status or None)
     args = parser.parse_args(argv)
@@ -102,12 +153,30 @@ def _main(argv: list[str] | None = None) -> None:
         parser.error(f"{args.settings.resolve()} not found; copy settings.example.toml to settings.toml")
     if args.command == "update":
         return _update(args.settings, args.env)
+    if args.command == "start":
+        if args.what != "admin":
+            parser.error("say what to start: devexai start admin")
+        return _start(args, data)
     if first:
         print(f"First run: created {data / home.SETTINGS}. Edit it to change maintainers, network and updates.")
+    from . import instance
+
+    if instance.acquire(Path(instance.LOCK)) is None:  # one bot per data folder, whichever way it was started
+        from .config import load_settings
+        from .web.server import dashboard_url
+
+        url = dashboard_url(load_settings(args.settings).web) + "/"
+        if args.open_dashboard or tray_mode:
+            import webbrowser
+
+            webbrowser.open(url)
+        print(f"DevExAI is already running for {data}; its dashboard is {url}")
+        return
     from .app import run
 
     run(args.settings, args.env, adapter="none" if args.headless else args.chat,
-        open_browser=home.frozen() and not args.no_browser, replay=args.replay, tray=tray_mode)
+        open_browser=home.frozen() and not args.no_browser, replay=args.replay, tray=tray_mode,
+        open_dashboard=args.open_dashboard)
 
 
 if __name__ == "__main__":

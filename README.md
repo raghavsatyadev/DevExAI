@@ -169,16 +169,31 @@ Every blog post offers two install choices:
 | **This project only** | Files go into the project's own folder (e.g. `.claude/`, `.gemini/`, `.codex/`) and can be committed so the whole team gets it. | Team-specific or project-specific tools. |
 | **My whole machine** | Files go into the user's personal settings folder and work in every project. | Personal productivity tools. |
 
-Install is one command (e.g. `devex install <tool> --project` or `--global`), shows exactly what it will
-change before doing it, and has a matching `devex uninstall`.
+Install is one command, copied from the post: `devexai install <tool>` (this project) or
+`devexai install <tool> --global`. It shows exactly what it will change before doing it, and
+`devexai uninstall <tool>` undoes it.
 
-One idea (one Slack thread) is one tool with one name, the one its blog post shows. `devex` is a single
-Python file (standard library only) that the server hands out at `/blog/devex.py`; each post shows the
-commands. It installs the tool's files under `.claude/`, `.gemini/` and `.codex/` at the same path in the
-project or home folder, never runs anything from the tool and never edits settings files (it prints
-those steps instead). It refuses to overwrite a file that is not the tool's unless asked (`--force`, which
-keeps the old file to put back), and records what it wrote in `.devex/<tool>.json`, so uninstall removes
-exactly that and keeps any file edited since.
+Each computer needs the `devexai` command once. The dashboard's `/get` page (linked from every post)
+hands it out, over the company network only:
+
+| Who | Setup | What it does |
+|---|---|---|
+| Developers on Windows | **DevExAI-User-Setup.exe** | Installs `devexai` for this user (no Python, no admin rights), puts it on PATH, trusts the company certificate authority and connects to the server. |
+| Developers on Linux | `curl -fsSk <server>/get/install.sh \| sh` | The same, into `~/.local/bin`. |
+| Anyone with Python 3.11+ (macOS) | `devexai.pyz` | The same command as one file: `python3 devexai.pyz install <tool>`. |
+| The admin, on the host | **DevExAI-Admin-Setup-<version>.exe** | Installs the bot and dashboard plus the same `devexai` commands. `devexai start admin` starts the bot in the background and opens the dashboard; run again, it only opens the dashboard (one bot per data folder). |
+
+The developer command is its own package (`src/devexai_cli`, standard library only) and holds no admin
+code; a test and the build both check that. `devexai update` gets a newer one from the server (checked
+by SHA-256 over the company's TLS). `devexai connect <server>` trusts the server's certificate authority
+the first time, like SSH does with a new host, and keeps it only if it signed the server's own certificate.
+
+One idea (one Slack thread) is one tool with one name, the one its blog post shows. `devexai` installs the
+tool's files under `.claude/`, `.gemini/` and `.codex/` at the same path in the project or home folder,
+never runs anything from the tool and never edits settings files (it prints those steps instead). It
+refuses to overwrite a file that is not the tool's unless asked (`--force`, which keeps the old file to put
+back), and records what it wrote in `.devex/<tool>.json`, so uninstall removes exactly that and keeps any
+file edited since.
 
 ## 8. Which AI does what (and why)
 

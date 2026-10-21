@@ -25,6 +25,7 @@ WNDPROC = ctypes.WINFUNCTYPE(LRESULT, w.HWND, w.UINT, w.WPARAM, w.LPARAM)
 
 WM_NULL, WM_DESTROY, WM_CLOSE, WM_CONTEXTMENU, WM_USER, WM_APP = 0, 0x2, 0x10, 0x7B, 0x400, 0x8000
 CALLBACK, OPEN_REQUEST = WM_APP + 1, WM_APP + 2  # icon events; "open the dashboard" from a 2nd launch
+STOP_REQUEST = WM_APP + 3  # "quit": the setup sends it before replacing or removing the program
 NIN_SELECT, NIN_KEYSELECT, NIN_BALLOONUSERCLICK = WM_USER, WM_USER + 1, WM_USER + 5
 NIM_ADD, NIM_MODIFY, NIM_DELETE, NIM_SETVERSION = 0, 1, 2, 4
 NIF_MESSAGE, NIF_ICON, NIF_TIP, NIF_INFO, NIF_SHOWTIP = 0x1, 0x2, 0x4, 0x10, 0x80
@@ -91,8 +92,10 @@ MenuItem = tuple[str, Callable[[], None]] | None  # None draws a separator
 
 
 class Tray:
-    def __init__(self, tooltip: str, menu: list[MenuItem], on_open: Callable[[], None], icon: Path | None):
+    def __init__(self, tooltip: str, menu: list[MenuItem], on_open: Callable[[], None], icon: Path | None,
+                 on_quit: Callable[[], None] | None = None):
         self.tooltip, self.menu, self.on_open, self.icon_path = tooltip, menu, on_open, icon
+        self.on_quit = on_quit
         self.user32, self.shell32, self.kernel32 = _api()
         self.hwnd = None
         self._icon = None
@@ -161,6 +164,9 @@ class Tray:
             if message == OPEN_REQUEST:
                 self._safe("open", self.on_open)
                 return 0
+            if message == STOP_REQUEST and self.on_quit:
+                self._safe("quit", self.on_quit)
+                return 0
             if message == self._taskbar_created and self.hwnd:
                 self._add()
                 return 0
@@ -216,11 +222,12 @@ class Tray:
         return data
 
 
-def create(tooltip: str, menu: list[MenuItem], on_open: Callable[[], None], icon: Path | None = None) -> Tray | None:
+def create(tooltip: str, menu: list[MenuItem], on_open: Callable[[], None], icon: Path | None = None,
+           on_quit: Callable[[], None] | None = None) -> Tray | None:
     """Start the icon; None off Windows or when Windows refused it (the caller then runs without one)."""
     if os.name != "nt":
         return None
-    tray = Tray(tooltip, menu, on_open, icon)
+    tray = Tray(tooltip, menu, on_open, icon, on_quit)
     return tray if tray.start() else None
 
 

@@ -6,9 +6,10 @@ import pytest
 from test_blog import raw
 from test_web import Client, make_server
 
-from devexai import devex
 from devexai.chat import Event
 from devexai.stages import Stage
+from devexai_cli import cli, files, tools
+from devexai_cli.net import DevexError
 
 SKILL = ".claude/skills/lint/SKILL.md"
 HELPER = ".claude/skills/lint/run_lint.py"
@@ -43,10 +44,10 @@ def url(server):
 
 
 def run(server, tmp_path, *args, home=None):
-    return devex.main(["--server", url(server), *args], home=home or tmp_path / "home")
+    return cli.main([*args, "--server", url(server)], home=home or tmp_path / "home")
 
 
-def test_tool_list_has_only_published_tools_and_devex_is_served(web, tmp_path):
+def test_tool_list_has_only_published_tools_and_the_post_shows_the_commands(web, tmp_path):
     bot = web.bot
     bot.handle(Event("dan", "Unpublished idea", bot.settings.ideas_channel))
     bot.store.ideas.update(bot.store.ideas.list(1)[0].id, build={"files": FILES})
@@ -54,11 +55,12 @@ def test_tool_list_has_only_published_tools_and_devex_is_served(web, tmp_path):
     resp, data = raw(web, "GET", "/blog/tools.json")
     listed = json.loads(data)["tools"]
     assert resp.status == 200 and [t["id"] for t in listed] == [idea.id]
-    resp, data = raw(web, "GET", "/blog/devex.py")
-    assert resp.status == 200 and b"def install(" in data
+    resp, _ = raw(web, "GET", "/blog/devex.py")
+    assert resp.status == 303 and resp.getheader("Location") == "/get"  # the old script is gone
     page = Client(web).request("GET", f"/blog/{listed[0]['post']}")[1]
-    assert f"python devex.py install {listed[0]['name']} --project --server {url(web)}" in page
-    assert f"python devex.py install {listed[0]['name']} --global --server {url(web)}" in page
+    assert f">devexai install {listed[0]['name']}</pre>" in page
+    assert f">devexai install {listed[0]['name']} --global</pre>" in page
+    assert f"devexai uninstall {listed[0]['name']}" in page and f'href="{url(web)}/get"' in page
 
 
 def test_install_project_then_uninstall(web, tmp_path, capsys):
@@ -115,9 +117,9 @@ def test_global_goes_to_home_and_server_is_remembered(web, tmp_path):
     home = tmp_path / "home"
     assert run(web, tmp_path, "install", str(idea.id), "--global", "--yes", home=home) == 0
     assert (home / SKILL).is_file()
-    assert devex.main(["list"], home=home) == 0  # no --server: the saved one
+    assert cli.main(["list"], home=home) == 0  # no --server: the saved one
     name = json.loads(raw(web, "GET", "/blog/tools.json")[1])["tools"][0]["name"]
-    assert devex.main(["uninstall", name, "--global", "--yes"], home=home) == 0
+    assert cli.main(["uninstall", name, "--global", "--yes"], home=home) == 0
     assert not (home / ".claude").exists()
 
 
@@ -160,12 +162,12 @@ def zipped(entries):
     [(".claude/big.md", "x" * 1_000_001)],
 ])
 def test_bad_downloads_are_refused(entries):
-    with pytest.raises(devex.DevexError):
-        devex.read_zip(zipped(entries))
+    with pytest.raises(DevexError):
+        files.read_zip(zipped(entries))
 
 
 def test_receipt_outside_assistant_folders_is_refused(tmp_path):
     (tmp_path / ".devex").mkdir()
     (tmp_path / ".devex" / "x.json").write_text(json.dumps({"files": {"src/main.py": "0"}}))
-    with pytest.raises(devex.DevexError, match="not touching"):
-        devex.uninstall("x", tmp_path, yes=True)
+    with pytest.raises(DevexError, match="not touching"):
+        tools.uninstall("x", tmp_path, yes=True)
