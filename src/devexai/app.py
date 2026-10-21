@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import shutil
+import sys
 import threading
 import webbrowser
 from dataclasses import replace
@@ -167,7 +168,8 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
             if not bot.settings.blog.base_url:  # no blog site yet: the dashboard serves the posts at /blog
                 bot.settings = replace(bot.settings, blog=replace(bot.settings.blog, base_url=f"{web.base_url}/blog"))
             web.start()
-            remember_server(web)
+            if getattr(sys, "frozen", False):  # the installed build; not test runs from source
+                remember_server(web)
             print(web.startup_message(), flush=True)
             if open_dashboard or (open_browser and web.setup_url):  # first run: create the admin account
                 webbrowser.open(web.setup_url or f"{web.base_url}/")
