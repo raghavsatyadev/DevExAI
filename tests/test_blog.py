@@ -1,7 +1,15 @@
+import base64
+import hashlib
+import http.client
+import io
+import re
+import zipfile
+
 import pytest
 from test_web import Client, make_server
 
 from devexai.chat import Event
+from devexai.flow import post
 from devexai.stages import Stage
 from devexai.web import blog
 
@@ -14,10 +22,26 @@ def web(tmp_path):
     server.server_close()
 
 
+FILES = [{"path": "README.md", "content": "# Tool\n\n## Install\n\n1. Copy `a.py` to `~/.claude/`.\n"
+                                         "2. Run:\n   `python a.py --x <y>`\n\n```\npip install x && echo '<b>'\n```\n"},
+         {"path": "a.py", "content": "print('<script>&amp;')\n"},
+         {"path": "tests/test_a.py", "content": "def test(): pass\n"}]
+
+
+def raw(server, method, path):
+    conn = http.client.HTTPConnection("127.0.0.1", server.server_address[1], timeout=5)
+    conn.request(method, path, headers={"Host": f"127.0.0.1:{server.server_address[1]}"})
+    resp = conn.getresponse()
+    data = resp.read()
+    conn.close()
+    return resp, data
+
+
 def publish(server):
     bot = server.bot
     bot.handle(Event("carol", "Run ktlint before commit <script>x</script>", bot.settings.ideas_channel))
     idea = bot.store.ideas.list(10)[0]
+    bot.store.ideas.update(idea.id, build={"files": FILES})
     for text in (f"/devex-approve {idea.id}", f"/devex-built {idea.id}", f"/devex-publish {idea.id} run **it**"):
         bot.handle(Event("alice", text, bot.settings.ideas_channel))
     idea = bot.store.ideas.get(idea.id)
@@ -33,7 +57,7 @@ def test_published_post_is_public_and_escaped(web):
     assert resp.status == 200 and f'href="/blog/{name}"' in index and "Lint  b skill /b" in index
     resp, page = client.request("GET", f"/blog/{name}")
     assert resp.status == 200 and "<h1>Lint &lt;b&gt;skill&lt;/b&gt;</h1>" in page
-    assert "<script>" not in page and "<li>SKILL.md</li>" in page
+    assert "<script>x" not in page and "<li>SKILL.md</li>" in page
     assert "run <strong>it</strong>" not in page and "run **it**" in page  # the install note stays plain text
     assert idea.id
 
@@ -61,3 +85,49 @@ def test_front_matter():
     front, body = blog.split_front('---\ntitle: "A \\"q\\""\nidea: 3\n---\n# A\n')
     assert front == {"title": 'A "q"', "idea": "3"} and body == "# A\n"
     assert blog.split_front("no front")[0] == {}
+
+
+def test_published_tool_files_can_be_copied_and_downloaded(web):
+    publish(web)
+    name = next(web.bot.settings.blog.dir.glob("*.md")).name
+    resp, page = Client(web).request("GET", f"/blog/{name}")
+    script = re.search(r"<script>(.*?)</script>", page, re.DOTALL).group(1)
+    digest = base64.b64encode(hashlib.sha256(script.encode()).digest()).decode()
+    assert f"script-src 'sha256-{digest}'" in resp.getheader("Content-Security-Policy")
+    assert f'href="/blog/{name}/files.zip"' in page and "<h2>Files</h2>" in page
+    assert "print('&lt;script&gt;&amp;amp;')" in page
+    assert '<code data-copy="" title="Click to copy">python a.py --x &lt;y&gt;</code>' in page
+    assert "pip install x &amp;&amp; echo '&lt;b&gt;'</pre>" in page and "<ol>" in page
+    assert f"curl.exe -fLo lint-b-skill-b.zip http://127.0.0.1:{web.server_address[1]}/blog/{name}/files.zip" in page
+
+    resp, data = raw(web, "GET", f"/blog/{name}/files.zip")
+    assert resp.status == 200 and resp.getheader("Content-Type") == "application/zip"
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        assert sorted(zf.namelist()) == ["README.md", "a.py", "tests/test_a.py"]
+        assert zf.read("a.py") == b"print('<script>&amp;')\n"
+    resp, data = raw(web, "GET", f"/blog/{name}/files/tests/test_a.py")
+    assert resp.status == 200 and data == b"def test(): pass\n"
+    assert resp.getheader("Content-Type") == "text/plain; charset=utf-8"
+    assert resp.getheader("Content-Disposition") == 'attachment; filename="test_a.py"'
+    resp, data = raw(web, "HEAD", f"/blog/{name}/files.zip")
+    assert resp.status == 200 and data == b"" and int(resp.getheader("Content-Length")) > 0
+    for bad in ("files/missing.py", "files/../a.py", "files/%2e%2e/a.py", "files/A.PY", "other.zip"):
+        assert raw(web, "GET", f"/blog/{name}/{bad}")[0].status == 404
+
+
+def test_files_only_for_published_ideas(web):
+    bot = web.bot
+    bot.handle(Event("carol", "Run ktlint before commit", bot.settings.ideas_channel))
+    idea = bot.store.ideas.update(bot.store.ideas.list(10)[0].id, build={"files": FILES})
+    name = post.filename(idea)
+    bot.settings.blog.dir.mkdir(parents=True, exist_ok=True)
+    (bot.settings.blog.dir / name).write_text("# Hand placed\n", encoding="utf-8")
+    resp, page = Client(web).request("GET", f"/blog/{name}")
+    assert resp.status == 200 and "files.zip" not in page
+    assert raw(web, "GET", f"/blog/{name}/files.zip")[0].status == 404
+    assert raw(web, "GET", f"/blog/{name}/files/a.py")[0].status == 404
+
+
+def test_dashboard_pages_allow_no_scripts(web):
+    resp, _ = Client(web).request("GET", "/login")
+    assert "script-src" not in resp.getheader("Content-Security-Policy")

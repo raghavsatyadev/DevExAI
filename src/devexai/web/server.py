@@ -26,8 +26,9 @@ from ..chat.slack_ids import unmention
 from ..config import WebSettings
 from ..flow import commands
 from ..stages import TERMINAL, WAITING_ON_MAINTAINER
-from . import blog, pages, people_pages
+from . import pages, people_pages
 from .auth import SESSION_SECONDS, Session, Sessions, Throttle
+from .blog_routes import blog_get
 from .people_routes import account_post, people_post, setup_post
 from .slack_routes import slack_get, slack_post
 
@@ -148,13 +149,15 @@ class _Handler(BaseHTTPRequestHandler):
 
     # plumbing
     def _send(self, status: int, body: str = "", headers: dict[str, str] | None = None) -> None:
-        data = body.encode("utf-8")
+        self._send_bytes(status, body.encode("utf-8"), "text/html; charset=utf-8" if body else "", headers)
+
+    def _send_bytes(self, status: int, data: bytes, content_type: str, headers: dict[str, str] | None = None) -> None:
         self.send_response(status)
         extra = {"Strict-Transport-Security": "max-age=31536000"} if self.server.web.tls else {}
         for key, value in {**_SECURITY_HEADERS, **extra, **(headers or {})}.items():
             self.send_header(key, value)
-        if body:
-            self.send_header("Content-Type", "text/html; charset=utf-8")
+        if content_type:
+            self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         if self.command != "HEAD":
@@ -244,12 +247,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.OK, people_pages.setup_page(token, admin.name, email=admin.email or ""))
         if url.path == "/login":
             return self._send(HTTPStatus.OK, people_pages.login_page())
-        if url.path in ("/blog", "/blog/"):  # the blog is for everyone: no sign-in
-            return self._send(HTTPStatus.OK, blog.index_page(bot.settings.blog.dir))
-        if url.path.startswith("/blog/"):
-            page = blog.post_page(bot.settings.blog.dir, url.path.removeprefix("/blog/"))
-            return self._send(HTTPStatus.OK, page) if page else \
-                self._send(HTTPStatus.NOT_FOUND, pages.message_page("Not found", "No such post."))
+        if url.path == "/blog" or url.path.startswith("/blog/"):  # the blog is for everyone: no sign-in
+            return blog_get(self, url.path, _SECURITY_HEADERS["Content-Security-Policy"])
         signed_in = self._session()
         if signed_in is None:
             return self._redirect("/login")
