@@ -148,3 +148,18 @@ def test_delete_thread_removes_only_the_bots_posts_parent_last():
     assert chat.delete_thread("C1:1.0") == 2
     assert chat.web.deleted == [("C1", "3.0"), ("C1", "1.0")]
     assert chat.delete_thread("t3") == 0
+
+
+def test_stop_twice_survives_a_socket_that_fails_to_close():
+    class BrokenSocket:
+        closed = 0
+
+        def close(self):
+            BrokenSocket.closed += 1
+            raise AttributeError("'NoneType' object has no attribute 'close'")  # slack_sdk on a dead socket
+
+    chat, _ = make()
+    chat._socket = BrokenSocket()
+    chat.stop()
+    chat.stop()  # run()'s cleanup after `devexai stop admin`
+    assert BrokenSocket.closed == 1

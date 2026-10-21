@@ -209,7 +209,10 @@ def run(settings_path: Path, env_path: Path = Path(".env"), *, adapter: str | No
         if icon:
             icon.close()
         if hasattr(bot.chat, "stop"):  # e.g. close the Slack socket so its threads do not hold the exit
-            bot.chat.stop()
+            try:
+                bot.chat.stop()
+            except Exception:  # the dashboard below must still shut down, or the process never ends
+                logging.exception("closing the chat failed")
         if web:
             web.shutdown()
             web.server_close()

@@ -155,9 +155,14 @@ class SlackChat:
             pass
 
     def stop(self) -> None:
+        """Safe to call more than once: `devexai stop admin` calls it, then run()'s cleanup calls it again."""
         self._stop.set()
-        if self._socket is not None:
-            self._socket.close()
+        socket, self._socket = self._socket, None
+        if socket is not None:
+            try:
+                socket.close()
+            except Exception:  # slack_sdk fails closing a socket that is already gone; we are leaving anyway
+                log.debug("slack: closing the socket failed", exc_info=True)
         self._work.shutdown(wait=False)
 
     def _on_request(self, client, req) -> None:
