@@ -1,8 +1,8 @@
 """Install a tool into a project or the home folder, and remove it again.
 
-The command shows every change and asks first; it never runs anything from the tool and never edits
-settings files. Uninstall removes exactly what install wrote (files edited since are kept) and puts back
-any file it replaced.
+The command shows every change and asks first; it never runs anything from the tool. The only settings
+it edits is statusLine, for a status-line tool (statusline.py). Uninstall removes exactly what install
+wrote (files edited since are kept) and puts back any file or setting it replaced.
 """
 
 from __future__ import annotations
@@ -14,7 +14,8 @@ import sys
 import urllib.parse
 from pathlib import Path
 
-from .files import current_hash, installable, load_receipt, made_dirs, owners, read_zip, receipt_path, target
+from . import statusline
+from .files import current_hash, load_receipt, made_dirs, owners, read_zip, receipt_path, target
 from .net import STATE, DevexError, fetch, find, plain, sha256, tools
 
 
@@ -54,21 +55,34 @@ def confirm(question: str, yes: bool) -> bool:
 
 
 def install(server: str, wanted: str, root: Path, *, home: Path, yes: bool, force: bool, scope: str = "",
-            out=print) -> bool:
+            settings_file: str = statusline.PROJECT_FILE, out=print) -> bool:
     tool = find(tools(server, home), wanted)
     name = re.sub(r"[^a-z0-9-]", "", tool["name"].lower())[:60] or f"tool-{tool.get('id')}"
-    files = installable(read_zip(fetch(f"{server}/blog/{urllib.parse.quote(tool['post'])}/files.zip", home)))
-    manual = plain(tool.get("install", "")).strip()
+    files, status = statusline.install_set(
+        read_zip(fetch(f"{server}/blog/{urllib.parse.quote(tool['post'])}/files.zip", home)))
+    manual = "" if status else plain(tool.get("install", "")).strip()  # its steps are what devexai does
     if not files:
         out(f"{name} has nothing to install automatically (no .claude/, .gemini/ or .codex/ files).")
         if manual:
             out(f"Its own steps:\n{manual}")
         return False
     steps = plan_install(root, name, files, force)
+    old = load_receipt(root, name) or {}
+    setting = None
+    if status:
+        want = statusline.entry(root, status[1], status[2])
+        action, problem = statusline.plan(root, settings_file, want, old.get("settings"), force)
+        if problem:
+            raise DevexError(f"not installing, to keep your settings: {problem}\n"
+                             "Add --force to replace it (the old value is kept to put back on uninstall).")
+        setting = (action, want)
     out(f"Install {name} (#{tool.get('id')}) into {root}:")
     for action, rel in steps:
         out(f"  {action:<8} {rel}")
-    if all(a == "same" for a, _ in steps):
+    if setting:
+        out(f"  {setting[0]:<8} {settings_file} {statusline.KEY}: {statusline.describe(setting[1])}")
+        out("  Claude Code runs that command each time it draws its status line.")
+    if all(a == "same" for a, _ in steps) and (not setting or setting[0] == "same"):
         out("Already installed; nothing to change.")
         return False
     if not confirm("Go ahead?", yes):
@@ -94,6 +108,9 @@ def install(server: str, wanted: str, root: Path, *, home: Path, yes: bool, forc
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(files[rel])
         receipt["files"][rel] = sha256(files[rel])
+    if setting and setting[0] != "same":
+        receipt["dirs"] += [d for d in made_dirs(root, settings_file) if d not in receipt["dirs"]]
+        receipt["settings"] = statusline.apply(root, settings_file, setting[1], receipt.get("settings"))
     receipt.update(tool=name, id=tool.get("id"), title=plain(tool.get("title", "")), server=server)
     state.mkdir(exist_ok=True)
     receipt_path(root, name).write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
@@ -115,6 +132,9 @@ def uninstall(wanted: str, root: Path, *, yes: bool, out=print) -> bool:
         have = current_hash(target(root, rel))
         action = "restore" if rel in backups else "remove" if have == digest else "keep" if have else "gone"
         out(f"  {action:<8} {rel}" + ("  (edited since install)" if action == "keep" else ""))
+    if setting := receipt.get("settings"):
+        action = statusline.undo_plan(root, setting)
+        out(f"  {action:<8} {setting['file']} {statusline.KEY}" + ("  (changed since install)" if action == "keep" else ""))
     if not confirm("Go ahead?", yes):
         out("Nothing changed.")
         return False
@@ -125,6 +145,8 @@ def uninstall(wanted: str, root: Path, *, yes: bool, out=print) -> bool:
             shutil.copy2(target(state, backups[rel]), path)
         elif current_hash(path) == digest:
             path.unlink()
+    if setting:
+        statusline.undo(root, setting)
     for rel in sorted(receipt.get("dirs", []), key=lambda d: d.count("/"), reverse=True):
         folder = target(root, rel)
         if folder.is_dir() and not any(folder.iterdir()):

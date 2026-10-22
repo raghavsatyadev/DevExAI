@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__, connect, selfupdate
+from . import __version__, connect, selfupdate, statusline
 from .net import DevexError, plain, server_url, tools
 from .tools import install, uninstall
 
@@ -53,7 +53,8 @@ def main(argv: list[str] | None = None, home: Path | None = None, prog: str = "d
         elif args.command == "install":
             root = home if args.glob else (args.dir or Path.cwd()).resolve()
             install(server, args.tool, root, home=home, yes=args.yes, force=args.force,
-                    scope=" --global" if args.glob else "")
+                    scope=" --global" if args.glob else "",
+                    settings_file=statusline.GLOBAL_FILE if args.glob else statusline.PROJECT_FILE)
         else:
             uninstall(args.tool, home if args.glob else (args.dir or Path.cwd()).resolve(), yes=args.yes)
         if hint := selfupdate.notice(server, home):

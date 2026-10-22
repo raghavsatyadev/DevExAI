@@ -26,7 +26,10 @@ A maintainer approved the plan below; write the tool it describes.
   (into the user's home). It copies only files under .claude/, .gemini/ and .codex/, to the same path
   under the project or home folder, so put everything the assistant needs there: helper scripts inside
   the skill's own folder, referred to by relative paths. Files elsewhere (README, tests) stay in the
-  download. Settings files such as settings.json are never changed: say any such step in install.
+  download. A status-line helper is the one exception: ship the script and a settings.example.json
+  holding only {{"statusLine": {{"type": "command", "command": "python <script>"}}}}; the command copies
+  the script under .claude/ and sets statusLine itself. Other settings are never changed: say any such
+  step in install.
 - Include automated tests and a short README.md: what it does, how to install it, how to run the tests.
 - Keep it small, plain and readable. No network calls, downloads, telemetry or services the plan does
   not list as a resource. Never read, print or send secrets. No obfuscated or encoded code.

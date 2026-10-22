@@ -185,9 +185,11 @@ It is one command, copied from the post:
 - `devexai uninstall <tool>` removes it again
 
 Before changing anything, it shows exactly what it will add and asks first. It never runs the tool's
-code and never changes your settings files (if a setting is needed, it tells you what to add). It will
-not replace a file that is not part of the tool unless you ask, and removing a tool keeps any file you
-changed yourself.
+code. The one setting it changes is the Claude Code status line, for a status-line tool: in a project
+it goes in `.claude/settings.local.json` (not shared with the team), with `--global` in your own
+`~/.claude/settings.json`. For any other setting it tells you what to add. It will not replace a file or
+a status line that is not part of the tool unless you ask, and removing a tool puts back what was there
+and keeps anything you changed yourself.
 
 **Each computer needs DevExAI once.** The "Get DevExAI" page on the dashboard (linked from every post)
 hands it out, inside the company network only:

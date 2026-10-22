@@ -11,4 +11,4 @@ Its own package, Python standard library only, importing nothing from the DevExA
 the developer build ships this and nothing else. A test checks the imports.
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"

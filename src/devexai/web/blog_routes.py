@@ -16,7 +16,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
-from devexai_cli.files import installable
+from devexai_cli.statusline import install_set
 
 from ..builder.build import file_map
 from ..flow import post
@@ -48,9 +48,9 @@ def published_files(h: _Handler, name: str) -> dict[str, str]:
 
 
 def by_hand_steps(idea, files: dict[str, str]) -> str | None:
-    """None when `devexai install` can add the tool (it has .claude/, .gemini/ or .codex/ files, the same
-    test the command uses); otherwise the tool's own install steps from its build record."""
-    if installable(dict.fromkeys(files, b"")):
+    """None when `devexai install` can add the tool (.claude/, .gemini/ or .codex/ files or a status-line
+    script, the same test the command uses); otherwise the tool's own install steps from its build record."""
+    if install_set({p: c.encode() for p, c in files.items()})[0]:
         return None
     return str((idea.build or {}).get("install") or "")
 

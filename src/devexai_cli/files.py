@@ -1,7 +1,8 @@
 """A tool's files, checked again on this computer, and the record of what an install wrote.
 
 Only files under .claude/, .gemini/ and .codex/ are installed, at the same path under the project or
-home folder. What was written is recorded in .devex/<tool>.json there.
+home folder (a status-line script goes under .claude/ too, see statusline.py).
+What was written is recorded in .devex/<tool>.json there.
 """
 
 from __future__ import annotations
@@ -78,7 +79,8 @@ def load_receipt(root: Path, name: str) -> dict | None:
     except ValueError:
         raise DevexError(f"{path} is damaged; remove it by hand") from None
     # The receipt may sit in a shared repository: only ever act on assistant folders inside root.
-    for rel in [*data.get("files", {}), *data.get("backups", {}), *data.get("dirs", [])]:
+    settings = [data["settings"].get("file", "")] if isinstance(data.get("settings"), dict) else []
+    for rel in [*data.get("files", {}), *data.get("backups", {}), *data.get("dirs", []), *settings]:
         if safe_path(rel).split("/")[0] not in ASSISTANT_DIRS:
             raise DevexError(f"{path} names {plain(rel)!r}, outside {', '.join(ASSISTANT_DIRS)}; not touching it")
     return data

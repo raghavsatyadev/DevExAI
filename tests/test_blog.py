@@ -177,7 +177,8 @@ def install_panel(page):
 
 def test_tool_set_up_by_hand_shows_its_own_steps(web):
     from devexai.llm.samples import SAMPLES
-    build = SAMPLES["builder"]  # the replay status-line tool: one script copied by hand, no .claude/ files
+    build = dict(SAMPLES["builder"])  # the replay status-line tool without its settings example: by hand
+    build["files"] = [f for f in build["files"] if f["path"] != "settings.example.json"]
     name = publish_with(web, {"files": build["files"], "install": build["install"]})
     side = install_panel(Client(web).request("GET", f"/blog/{name}")[1])
     assert "devexai install lint" not in side and "devexai uninstall" not in side and "Get DevExAI" not in side
