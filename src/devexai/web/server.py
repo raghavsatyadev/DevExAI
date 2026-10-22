@@ -65,7 +65,9 @@ class _Capture:
 
 
 def dashboard_url(web: WebSettings, port: int | None = None) -> str:
-    """Where people open the dashboard: the first allowed name, or this machine when it is not shared."""
+    """Where people open the dashboard: the tunnel's public address, the first allowed name, or this machine."""
+    if web.public_url:
+        return web.public_url
     scheme = "https" if web.tls else "http"
     host = "127.0.0.1" if is_loopback(web.host) or not web.allowed_hosts else web.allowed_hosts[0]
     return f"{scheme}://{host}:{port or web.port}"
@@ -117,7 +119,8 @@ class Dashboard(ThreadingHTTPServer):
         """Host header values we answer to. Anything else (DNS rebinding, stray names) is refused."""
         names = (*LOOPBACK_NAMES, *self.web.allowed_hosts)
         default = 443 if self.web.tls else 80
-        return {f"{n}:{self.port}" for n in names} | ({*names} if self.port == default else set())
+        public = {urllib.parse.urlsplit(self.web.public_url).netloc.lower()} if self.web.public_url else set()
+        return {f"{n}:{self.port}" for n in names} | ({*names} if self.port == default else set()) | public
 
     @property
     def base_url(self) -> str:

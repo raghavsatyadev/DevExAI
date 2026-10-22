@@ -231,6 +231,15 @@ def test_allowed_hosts_extend_origins(web):
     assert c.request("GET", "/")[0].status == 200
 
 
+def test_public_url_is_an_origin_and_the_link_base(web):
+    web.web = WebSettings(port=web.port, public_url="https://demo.ngrok-free.app")
+    assert "demo.ngrok-free.app" in web.origins and web.base_url == "https://demo.ngrok-free.app"
+    c = Client(web)
+    c.host = "demo.ngrok-free.app"
+    c.login()
+    assert c.request("GET", "/")[0].status == 200
+
+
 def test_untrusted_text_is_escaped(web):
     c = Client(web).login()
     idea = submit(web, "<script>alert(1)</script>")

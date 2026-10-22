@@ -51,6 +51,7 @@ class WebSettings:
     tls_cert: str = ""                # PEM files; needed to serve beyond this machine
     tls_key: str = ""
     insecure_http: bool = False       # serve the network without TLS (passwords travel in clear)
+    public_url: str = ""              # address a tunnel (e.g. ngrok) gives it on the internet; links use it
 
     @property
     def tls(self) -> bool:
@@ -129,7 +130,8 @@ def save_env(path: Path, updates: dict[str, str]) -> None:
 
 
 def _web(raw: dict) -> WebSettings:
-    return WebSettings(**{**raw, "allowed_hosts": tuple(h.lower() for h in raw.get("allowed_hosts", ()))})
+    return WebSettings(**{**raw, "allowed_hosts": tuple(h.lower() for h in raw.get("allowed_hosts", ())),
+                          "public_url": raw.get("public_url", "").strip().rstrip("/")})
 
 
 def load_settings(path: Path) -> Settings:

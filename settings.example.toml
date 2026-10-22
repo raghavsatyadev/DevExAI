@@ -38,6 +38,7 @@ allowed_hosts = []                # names people type to reach it, e.g. ["devexa
 tls_cert = ""                     # PEM certificate and key; required when host is not 127.0.0.1
 tls_key = ""
 insecure_http = false             # allow plain HTTP on the network anyway (passwords travel unencrypted)
+public_url = ""                   # internet address from a tunnel such as ngrok, e.g. "https://name.ngrok-free.app"
 
 [blog]                            # each released tool gets a Markdown post here
 dir = "data/blog"
