@@ -144,6 +144,10 @@ def _note_html(note: str) -> str:
     return f'<h3>Notes from the maintainer</h3><div class="note">{note}</div>' if note.strip() else ""
 
 
+def _words(html: str) -> str:
+    return " ".join(re.sub(r"<[^>]+>", " ", html).split())
+
+
 def _install_panel(slug: str, origin: str, note: str, ids: Iterator[int]) -> str:
     return (f'<div class="panel lift" id="install"><h2>Install it</h2><ol class="steps">'
             f'<li><b>Once per computer</b>, get the DevExAI command. Skip this if you have installed a '
@@ -156,6 +160,8 @@ def _install_panel(slug: str, origin: str, note: str, ids: Iterator[int]) -> str
 
 def _manual_panel(slug: str, zip_url: str, steps: str, note: str, ids: Iterator[int]) -> str:
     """For a tool with nothing devexai can install (no .claude/, .gemini/ or .codex/ files): set up by hand."""
+    if _words(note) == _words(escape(steps, quote=False)):
+        note = ""  # the publish note often repeats the build's steps; show them once
     steps = to_html(steps, ids) if steps.strip() else "<p>The README in the files says how to set it up.</p>"
     return (f'<div class="panel lift" id="install"><h2>Install it</h2><p>You set this tool up by hand. '
             f'<code>devexai install</code> has nothing to add for it.</p><ol class="steps">'

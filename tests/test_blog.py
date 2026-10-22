@@ -186,6 +186,10 @@ def test_tool_set_up_by_hand_shows_its_own_steps(web):
     assert "curl.exe --ssl-no-revoke -fLo lint-b-skill-b.zip" in side and "unzip -d lint-b-skill-b" in side
     assert "Notes from the maintainer" in side and "run **it**" in side
     assert "\u2014" not in side
+    web.bot.store.ideas.update(web.bot.store.ideas.list(10)[0].id, build={"files": build["files"], "install": "run **it**"})
+    side = install_panel(Client(web).request("GET", f"/blog/{name}")[1])
+    assert "Notes from the maintainer" not in side and "**it**" not in side  # the note repeats the steps: once
+    assert side.count("<strong>it</strong>") == 1
 
 
 def test_tool_by_hand_steps_are_escaped_and_have_a_fallback(web):
