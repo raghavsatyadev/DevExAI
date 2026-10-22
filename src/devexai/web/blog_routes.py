@@ -16,6 +16,8 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
+from devexai_cli.files import installable
+
 from ..builder.build import file_map
 from ..flow import post
 from ..stages import Stage
@@ -27,16 +29,30 @@ if TYPE_CHECKING:
 _ROUTE = re.compile(r"/blog/([^/]+?)(?:/(files\.zip|files/(.+)))?")
 
 
-def published_files(h: _Handler, name: str) -> dict[str, str]:
+def published_idea(h: _Handler, name: str):
+    """The published idea whose post this is, or None."""
     if not blog.NAME.fullmatch(name):
-        return {}
+        return None
     try:
         idea = h.server.bot.store.ideas.get(int(name.split("-", 1)[0]))
     except KeyError:
-        return {}
+        return None
     if idea.stage is not Stage.PUBLISHED or post.filename(idea) != name:
-        return {}
-    return file_map(idea.build)
+        return None
+    return idea
+
+
+def published_files(h: _Handler, name: str) -> dict[str, str]:
+    idea = published_idea(h, name)
+    return file_map(idea.build) if idea else {}
+
+
+def by_hand_steps(idea, files: dict[str, str]) -> str | None:
+    """None when `devexai install` can add the tool (it has .claude/, .gemini/ or .codex/ files, the same
+    test the command uses); otherwise the tool's own install steps from its build record."""
+    if installable(dict.fromkeys(files, b"")):
+        return None
+    return str((idea.build or {}).get("install") or "")
 
 
 def tool_name(idea, blog_dir) -> str:
@@ -80,7 +96,9 @@ def blog_get(h: _Handler, path: str, base_csp: str) -> None:
     if blog.OLD_NAME.fullmatch(name):  # links in chat from before posts were HTML
         return h._redirect(f"/blog/{name[:-3]}.html" + path[len("/blog/") + len(name):])
     if m and not m.group(2):
-        page = blog.post_page(folder, name, published_files(h, name), h.server.base_url)
+        idea = published_idea(h, name)
+        files = file_map(idea.build) if idea else {}
+        page = blog.post_page(folder, name, files, h.server.base_url, by_hand_steps(idea, files) if files else None)
         if page:
             return h._send(HTTPStatus.OK, page, html)
     elif m and (files := published_files(h, name)):

@@ -125,23 +125,47 @@ def _section(html: str, cls: str) -> tuple[str, str]:
     return re.sub(r"^\s*<h2>.*?</h2>", "", m.group(1), flags=re.S), html[:m.start()] + html[m.end():]
 
 
+def _download_commands(slug: str, zip_url: str) -> tuple[str, str]:
+    """One-line download and unpack commands: (Windows PowerShell, macOS or Linux)."""
+    # --ssl-no-revoke: Windows curl also asks the CA for revocation lists, which a company's own CA often
+    # does not publish; the certificate itself is still checked.
+    win = (f"curl.exe --ssl-no-revoke -fLo {slug}.zip {zip_url}; "
+           f"if ($?) {{ mkdir {slug} -Force > $null; tar -xf {slug}.zip -C {slug}; del {slug}.zip }}")
+    nix = f"curl -fLo {slug}.zip {zip_url} && unzip -d {slug} {slug}.zip && rm {slug}.zip"
+    return win, nix
+
+
+def _commands_html(slug: str, zip_url: str, ids: Iterator[int]) -> str:
+    win, nix = _download_commands(slug, zip_url)
+    return f'<h3>Windows (PowerShell)</h3>{code_block(win, ids)}<h3>macOS or Linux</h3>{code_block(nix, ids)}'
+
+
+def _note_html(note: str) -> str:
+    return f'<h3>Notes from the maintainer</h3><div class="note">{note}</div>' if note.strip() else ""
+
+
 def _install_panel(slug: str, origin: str, note: str, ids: Iterator[int]) -> str:
-    note = f'<h3>Notes from the maintainer</h3><div class="note">{note}</div>' if note.strip() else ""
     return (f'<div class="panel lift" id="install"><h2>Install it</h2><ol class="steps">'
             f'<li><b>Once per computer</b>, get the DevExAI command. Skip this if you have installed a '
             f'tool from this blog before.<div class="row"><a class="btn tonal" href="{origin}/get">Get DevExAI'
             f'</a></div></li><li><b>In your project folder</b>, run:{code_block(f"devexai install {slug}", ids)}'
             f'</li></ol><p class="muted">It shows what it will add and asks first. Want it in every project? '
             f'Add <code data-copy="" title="Click to copy">--global</code>. To remove it: <code data-copy="" '
-            f'title="Click to copy">devexai uninstall {slug}</code></p>{note}</div>')
+            f'title="Click to copy">devexai uninstall {slug}</code></p>{_note_html(note)}</div>')
 
 
-def _files_panels(slug: str, base: str, zip_url: str, files: dict[str, str], ids: Iterator[int]) -> str:
-    # --ssl-no-revoke: Windows curl also asks the CA for revocation lists, which a company's own CA often
-    # does not publish; the certificate itself is still checked.
-    win = (f"curl.exe --ssl-no-revoke -fLo {slug}.zip {zip_url}; "
-           f"if ($?) {{ mkdir {slug} -Force > $null; tar -xf {slug}.zip -C {slug}; del {slug}.zip }}")
-    nix = f"curl -fLo {slug}.zip {zip_url} && unzip -d {slug} {slug}.zip && rm {slug}.zip"
+def _manual_panel(slug: str, zip_url: str, steps: str, note: str, ids: Iterator[int]) -> str:
+    """For a tool with nothing devexai can install (no .claude/, .gemini/ or .codex/ files): set up by hand."""
+    steps = to_html(steps, ids) if steps.strip() else "<p>The README in the files says how to set it up.</p>"
+    return (f'<div class="panel lift" id="install"><h2>Install it</h2><p>You set this tool up by hand. '
+            f'<code>devexai install</code> has nothing to add for it.</p><ol class="steps">'
+            f'<li><b>Download the files.</b> This makes a <code>{slug}</code> folder where you run it.'
+            f'{_commands_html(slug, zip_url, ids)}</li><li><b>Follow the tool&#39;s own steps:</b>'
+            f'<div class="manual-steps">{steps}</div></li></ol>{_note_html(note)}</div>')
+
+
+def _files_panels(slug: str, base: str, zip_url: str, files: dict[str, str], ids: Iterator[int],
+                  by_hand: bool = False) -> str:
     rows = []
     for path, content in files.items():
         n = next(ids)
@@ -153,16 +177,23 @@ def _files_panels(slug: str, base: str, zip_url: str, files: dict[str, str], ids
     readme = next((files[p] for p in files if p.lower() == "readme.md"), None)
     readme = (f'<details class="file"><summary>README.md, shown as a page</summary>{to_html(readme, ids)}'
               f'</details>') if readme else ""
-    return (f'<div class="panel" id="files"><h2>Files</h2><p>You only need these to look inside the tool or '
-           f'to set it up by hand. <code>devexai install</code> does it for you.</p>'
-           f'<div class="row"><a class="btn tonal" href="{base}/files.zip" download>Download all files (.zip)</a>'
-           f'</div>{readme}{"".join(rows)}<details class="file"><summary>Download and unpack with one command</summary>'
-           f'<h3>Windows (PowerShell)</h3>{code_block(win, ids)}<h3>macOS or Linux</h3>{code_block(nix, ids)}'
-           f'</details></div>')
+    lede = ("These are the tool's files. The download command is in Install it." if by_hand else
+            "You only need these to look inside the tool or to set it up by hand. <code>devexai install</code> "
+            "does it for you.")
+    commands = "" if by_hand else (f'<details class="file"><summary>Download and unpack with one command</summary>'
+                                   f'{_commands_html(slug, zip_url, ids)}</details>')
+    return (f'<div class="panel" id="files"><h2>Files</h2><p>{lede}</p>'
+            f'<div class="row"><a class="btn tonal" href="{base}/files.zip" download>Download all files (.zip)</a>'
+            f'</div>{readme}{"".join(rows)}{commands}</div>')
 
 
-def post_page(folder: Path, name: str, files: dict[str, str] | None = None, origin: str = "") -> str | None:
-    """The post as a page, or None when there is no such post. `files`: the published tool's files, if any."""
+def post_page(folder: Path, name: str, files: dict[str, str] | None = None, origin: str = "",
+              steps: str | None = None) -> str | None:
+    """The post as a page, or None when there is no such post. `files`: the published tool's files, if any.
+
+    `steps`: None when `devexai install` can install the tool; otherwise it is set up by hand and these are
+    its own install steps (model text, rendered from the Markdown subset).
+    """
     if (post := _read(folder, name)) is None:
         return None
     facts, html = post
@@ -186,7 +217,8 @@ def post_page(folder: Path, name: str, files: dict[str, str] | None = None, orig
     note, html = _section(html, "install")
     links = (f'<div class="row"><a class="btn" href="#install">Install it</a><a class="btn tonal" '
              f'href="#files">See the files</a></div>')
-    main = f'<div class="post">{html}</div>' + _files_panels(slug, base, f"{origin}{base}/files.zip", files, ids)
-    side = _install_panel(slug, origin, note, ids)
+    zip_url, by_hand = f"{origin}{base}/files.zip", steps is not None
+    side = _manual_panel(slug, zip_url, steps, note, ids) if by_hand else _install_panel(slug, origin, note, ids)
+    main = f'<div class="post">{html}</div>' + _files_panels(slug, base, zip_url, files, ids, by_hand)
     return _page(title, hero("DevExAI blog", heading, byline + rest + links)
                  + f'<div class="layout"><div>{main}</div><aside class="side">{side}</aside></div>')

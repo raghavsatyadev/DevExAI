@@ -163,3 +163,47 @@ def test_old_markdown_post_becomes_html_and_old_links_redirect(web):
     assert post.migrate(folder, web.bot.store) == []
     resp, _ = raw(web, "GET", f"/blog/{old}/files.zip")
     assert resp.status == 303 and resp.getheader("Location") == f"/blog/{new}/files.zip"
+
+
+def publish_with(server, build):
+    idea = publish(server)
+    server.bot.store.ideas.update(idea.id, build=build)
+    return next(server.bot.settings.blog.dir.glob("*.html")).name
+
+
+def install_panel(page):
+    return re.search(r'<div class="panel lift" id="install">(.*?)</aside>', page, re.DOTALL).group(1)
+
+
+def test_tool_set_up_by_hand_shows_its_own_steps(web):
+    from devexai.llm.samples import SAMPLES
+    build = SAMPLES["builder"]  # the replay status-line tool: one script copied by hand, no .claude/ files
+    name = publish_with(web, {"files": build["files"], "install": build["install"]})
+    side = install_panel(Client(web).request("GET", f"/blog/{name}")[1])
+    assert "devexai install lint" not in side and "devexai uninstall" not in side and "Get DevExAI" not in side
+    assert "set this tool up by hand" in side
+    assert "Copy statusline_branch.py to ~/.claude/ and add the statusLine entry" in side
+    assert "curl.exe --ssl-no-revoke -fLo lint-b-skill-b.zip" in side and "unzip -d lint-b-skill-b" in side
+    assert "Notes from the maintainer" in side and "run **it**" in side
+    assert "\u2014" not in side
+
+
+def test_tool_by_hand_steps_are_escaped_and_have_a_fallback(web):
+    name = publish_with(web, {"files": FILES, "install": "Run `rm <x>` then <script>alert(1)</script>"})
+    page = Client(web).request("GET", f"/blog/{name}")[1]
+    side = install_panel(page)
+    assert "&lt;script&gt;" in side and page.count("<script>") == 1
+    assert '<code data-copy="" title="Click to copy">rm &lt;x&gt;</code>' in side
+    web.bot.store.ideas.update(web.bot.store.ideas.list(10)[0].id, build={"files": FILES})
+    side = install_panel(Client(web).request("GET", f"/blog/{name}")[1])
+    assert "The README in the files says how to set it up." in side
+
+
+def test_tool_devexai_can_install_keeps_the_install_command(web):
+    files = FILES + [{"path": ".claude/skills/lint/SKILL.md", "content": "# Lint\n"}]
+    name = publish_with(web, {"files": files, "install": "Restart Claude Code."})
+    page = Client(web).request("GET", f"/blog/{name}")[1]
+    side = install_panel(page)
+    assert "devexai install lint-b-skill-b" in side and "devexai uninstall lint-b-skill-b" in side
+    assert "set this tool up by hand" not in side and "curl.exe" not in side
+    assert "Download and unpack with one command" in page
