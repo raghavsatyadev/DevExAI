@@ -34,6 +34,7 @@ def status(folder):
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows pipes default to cp1252, which has no branch symbol
     print(status(folder_from(sys.stdin.read())))
 '''
 
