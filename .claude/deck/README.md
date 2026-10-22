@@ -1,6 +1,8 @@
 # DevExAI deck generator
 
-Builds `DevExAI.pptx` (19 slides) from the proposal in the root `README.md`.
+Builds `DevExAI.pptx` (22 slides) from the proposal in the root `README.md`.
+Slides 6 to 8 are a demo: a one-minute video and screenshots from a test run in `demo/`.
+The video `demo/DevExAI-flow.mp4` is not in git (it is on Drive); without it slide 6 shows the poster image.
 
 Needs Python with `python-pptx`, plus Windows with PowerPoint for the animation and render steps.
 Build into `out/`, not a temp folder: PowerPoint opens temp files in Protected View and cannot edit them.

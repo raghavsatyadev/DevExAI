@@ -6,6 +6,7 @@
 
 # Deck build output and scratch
 .claude/deck/out/
+.claude/deck/demo/*.mp4
 *.tmp
 __pycache__/
 *.pyc

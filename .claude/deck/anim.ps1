@@ -23,6 +23,10 @@ foreach ($s in $deck.Slides) {
     $eff.Timing.Duration = 0.4
     $last = $stepNo
   }
+  # Videos start with the slide's last build step; added last so no fade waits for the video to end
+  foreach ($m in @($s.Shapes | Where-Object { $_.Type -eq 16 })) {
+    $null = $seq.AddEffect($m, 83, 0, $withPrev)  # msoAnimEffectMediaPlay
+  }
   $types = ($seq | ForEach-Object { "$($_.EffectType)/$($_.Timing.TriggerType)" } |
     Sort-Object -Unique) -join ","
   Write-Output ("slide {0}: transition={1} effects={2} [{3}]" -f $s.SlideIndex,
