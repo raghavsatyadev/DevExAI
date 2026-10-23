@@ -12,6 +12,40 @@ DevExAI is a product that we will sell to other companies. We use it ourselves f
 runs its own copy on its own network, with its own chat app and its own AI accounts. It comes as a
 normal installer for Windows (Linux is next), and the admin finishes the setup in a web page.
 
+## See it work
+
+One idea going from Slack to an installed tool, recorded on a test workspace with saved AI answers.
+The preview below runs at double speed; [watch the full one-minute video](docs/media/devexai-flow.mp4).
+
+[![One idea from Slack to an installed tool](docs/media/devexai-flow.gif)](docs/media/devexai-flow.mp4)
+
+**1. Someone shares an idea** and gets a tracking number:
+
+![Sharing an idea in Slack](docs/media/idea.jpg)
+
+**2. The bot keeps the person and the maintainer up to date** in the idea's own thread: the safety
+check, the offer to build it in public, and the plan.
+
+<img src="docs/media/thread.jpg" alt="The idea's thread in Slack" width="446">
+
+**3. The maintainer approves the plan** with one button:
+
+![Plan approval buttons](docs/media/approve.jpg)
+
+**4. The tool is built and checked by a second AI.** The dashboard shows the review and the files:
+
+![The built tool on the dashboard](docs/media/files.jpg)
+
+**5. The post goes up** and the person is thanked in the channel:
+
+![Announcement in the channel](docs/media/announce.jpg)
+
+![The post on the built-in blog](docs/media/blog.jpg)
+
+**6. A colleague installs it** from PowerShell:
+
+![Installing the tool from PowerShell](docs/media/terminal.jpg)
+
 ---
 
 ## 1. The problem
